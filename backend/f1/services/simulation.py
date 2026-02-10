@@ -9,6 +9,31 @@ POINTS_GP = [25, 18, 15, 12, 10, 8, 6, 4, 2, 1]
 POINTS_SPRINT = [10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
 
 
+def clamp(v, lo=0, hi=100):
+    try:
+        v = int(v)
+    except Exception:
+        v = lo
+    return max(lo, min(hi, v))
+
+
+def clamp_driver_stats(d: Driver):
+    """
+    Patch sécurité: empêche les stats de partir en orbite.
+    Ajuste les bornes si tu veux (0-100).
+    """
+    d.speed = clamp(d.speed)
+    d.racing = clamp(d.racing)
+    d.reaction = clamp(d.reaction)
+    d.experience = clamp(d.experience)
+
+    # consistency/error_rate -> tu peux garder 0-100
+    if hasattr(d, "consistency"):
+        d.consistency = clamp(getattr(d, "consistency", 0))
+    if hasattr(d, "error_rate"):
+        d.error_rate = clamp(getattr(d, "error_rate", 0))
+
+
 @transaction.atomic
 def simulate_session(session_index: int, force: bool = False):
     """
@@ -61,10 +86,14 @@ def simulate_session(session_index: int, force: bool = False):
         # FP : boost stats seulement
         if session.session_type == "FP":
             stat_boost = int(np.random.randint(1, 5) + base // 50)
+
             d.speed += stat_boost
             d.racing += stat_boost
             d.reaction += stat_boost
             d.experience += stat_boost // 2
+
+            # ✅ PATCH: clamp stats
+            clamp_driver_stats(d)
             d.save()
 
             # pas de position / pas de points, juste payload
@@ -115,6 +144,8 @@ def simulate_session(session_index: int, force: bool = False):
             if session.session_type in ["GP", "S"] and pos <= 3:
                 d.podiums += 1
 
+            # ✅ PATCH: clamp stats
+            clamp_driver_stats(d)
             d.save()
 
             # persist result
@@ -180,15 +211,13 @@ def simulate_next(force: bool = False) -> dict:
 
 
 @transaction.atomic
-@transaction.atomic
 def reset_season(reset_skills: bool = True) -> dict:
     """
     Reset de saison :
     - supprime SessionResult
     - remet is_simulated=False sur toutes les sessions
     - remet à 0 points/wins/podiums/poles/fastest_laps sur tous les drivers
-    - OPTIONNEL (par défaut OUI): remet aussi les skills/affinités/consistency/error_rate
-      à la baseline (f1.legacy.driver.drivers)
+    - OPTIONNEL: remet aussi les skills/affinités/consistency/error_rate à la baseline
     """
     SessionResult.objects.all().delete()
     SeasonSession.objects.all().update(is_simulated=False)
@@ -262,7 +291,6 @@ def _format(d: Driver, points_gained: int, stats_gained: int, position):
         "consistency": d.consistency,
         "error_rate": d.error_rate,
 
-        # ✅ mêmes noms que ton front (tu affiches Street/High speed/Wet)
         "street_circuit_affinity": d.street_affinity,
         "high_speed_circuit_affinity": d.high_speed_affinity,
         "wet_circuit_affinity": d.wet_affinity,
