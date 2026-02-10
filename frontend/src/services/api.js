@@ -1,5 +1,15 @@
 // src/services/api.js
-const API_BASE = "";
+
+// ✅ Mets l'URL Render en prod via .env.production : VITE_API_BASE=https://xxxxx.onrender.com
+// ✅ Mets l'URL locale en dev via .env.development : VITE_API_BASE=http://127.0.0.1:8001
+const API_BASE = (import.meta.env.VITE_API_BASE || "").replace(/\/+$/, "");
+
+// Concat propre : joinUrl("https://x.com", "/api/teams/") => "https://x.com/api/teams/"
+function joinUrl(base, path) {
+    const b = String(base || "").replace(/\/+$/, "");
+    const p = String(path || "").replace(/^\/+/, "");
+    return b ? `${b}/${p}` : `/${p}`; // si base vide, on garde un chemin relatif
+}
 
 export function getAccessToken() {
     return localStorage.getItem("access_token");
@@ -33,7 +43,8 @@ async function refreshAccessToken() {
     const refresh = getRefreshToken();
     if (!refresh) return null;
 
-    const res = await fetch(`${API_BASE}/api/auth/refresh/`, {
+    const url = joinUrl(API_BASE, "/api/auth/refresh/");
+    const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ refresh }),
@@ -52,6 +63,8 @@ async function refreshAccessToken() {
 }
 
 export async function apiFetch(path, options = {}) {
+    const url = joinUrl(API_BASE, path);
+
     const makeHeaders = () => {
         const token = getAccessToken();
         const headers = {
@@ -63,7 +76,7 @@ export async function apiFetch(path, options = {}) {
     };
 
     // 1er essai
-    let res = await fetch(`${API_BASE}${path}`, {
+    let res = await fetch(url, {
         ...options,
         headers: makeHeaders(),
     });
@@ -72,7 +85,7 @@ export async function apiFetch(path, options = {}) {
     if (res.status === 401) {
         const newAccess = await refreshAccessToken();
         if (newAccess) {
-            res = await fetch(`${API_BASE}${path}`, {
+            res = await fetch(url, {
                 ...options,
                 headers: makeHeaders(),
             });
@@ -99,7 +112,8 @@ export async function apiFetch(path, options = {}) {
 }
 
 export async function login(username, password) {
-    const res = await fetch(`${API_BASE}/api/auth/login/`, {
+    const url = joinUrl(API_BASE, "/api/auth/login/");
+    const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),

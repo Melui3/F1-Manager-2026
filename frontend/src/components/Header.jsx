@@ -23,7 +23,11 @@ export default function Header({ userName: userNameProp, userAvatar: userAvatarP
             <div className="flex items-center gap-3">
 
                 <p className="text-xs text-gray-400">{logoUrl}</p>
-                <img src={logoUrl} alt="F1 Manager 2026"/>
+                <img
+                    src={logoUrl}
+                    alt="F1 Manager 2026"
+                    className="h-10 w-auto object-contain"
+                />
                 <h1 className="text-xl font-bold">F1 Manager 2026</h1>
             </div>
 
