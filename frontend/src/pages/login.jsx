@@ -45,9 +45,12 @@ export default function LoginScreen() {
         }
     }
 
+    const logoUrl = `${window.location.origin}${import.meta.env.BASE_URL}logo-f1m-2026.png`;
+
     return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-gray-900 text-white px-4">
-            <img src="/logo-f1m-2026.png" alt="F1 Manager 2026" className="h-20 w-50 object-contain" />
+
+            <img src={logoUrl} alt="F1 Manager 2026" />
             <h1 className="text-4xl font-bold mt-6 mb-6">F1 Manager 2026</h1>
 
             <div className="bg-gray-800 p-8 rounded-2xl shadow-md w-full max-w-sm border border-gray-700">

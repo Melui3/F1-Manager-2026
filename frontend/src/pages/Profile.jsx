@@ -12,7 +12,7 @@ export default function Profile() {
         setUserAvatar(url);
         if (key) setAvatarKey(key);
     }
-
+    const fallbackAvatar = `${import.meta.env.BASE_URL}avatars/default.jpg`;
     return (
         <div className="min-h-screen bg-gray-900 text-white flex flex-col">
             <Header />
@@ -23,10 +23,10 @@ export default function Profile() {
 
                 <div className="rounded-2xl border border-gray-700 bg-gray-800/40 p-5 mb-6 flex items-center gap-4">
                     <img
-                        src={userAvatar || "/avatars/default.jpg"}
+                        src={userAvatar || fallbackAvatar}
                         alt="avatar"
                         className="h-16 w-16 rounded-full object-cover border border-gray-700"
-                        onError={(e) => (e.currentTarget.src = "/avatars/default.jpg")}
+                        onError={(e) => (e.currentTarget.src = fallbackAvatar)}
                     />
                     <div>
                         <div className="text-xl font-bold">{userName}</div>
