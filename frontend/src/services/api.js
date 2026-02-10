@@ -3,6 +3,7 @@
 // ✅ Mets l'URL Render en prod via .env.production : VITE_API_BASE=https://xxxxx.onrender.com
 // ✅ Mets l'URL locale en dev via .env.development : VITE_API_BASE=http://127.0.0.1:8001
 const API_BASE = (import.meta.env.VITE_API_BASE || "").replace(/\/+$/, "");
+console.log("API_BASE =", API_BASE);
 
 // Concat propre : joinUrl("https://x.com", "/api/teams/") => "https://x.com/api/teams/"
 function joinUrl(base, path) {
