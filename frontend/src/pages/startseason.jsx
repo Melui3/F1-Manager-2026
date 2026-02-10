@@ -39,15 +39,17 @@ const norm = (s) => String(s ?? "").trim().toLowerCase();
 
 // === images backend: public/drivers/surname_lower_number.avif
 function driverImgSrc(d) {
+    const base = import.meta.env.BASE_URL
     const surname = d?.surname ?? "";
     const number = d?.number ?? "";
-    if (!surname || number === "") return "/drivers/default.avif";
-    return `/drivers/${surname.toLowerCase()}_${number}.avif`;
+    if (!surname || number === "") return null;
+    return `${base}drivers/${String(surname).toLowerCase()}_${number}.avif`;
 }
 
 function teamLogoSrc(teamName) {
+    const base = import.meta.env.BASE_URL
     const key = TEAM_KEY_MAP[teamName];
-    return key ? `/teams/${key}.avif` : "/teams/default.avif";
+    return key ? `${base}teams/${key}.avif` : null;
 }
 
 // status GP basé sur sessions simulées
@@ -519,7 +521,7 @@ export default function StartSeason() {
                             src={driverImgSrc(driver)}
                             alt={`${driver.name} ${driver.surname}`}
                             className="h-28 w-28 rounded-full border-2 border-red-500 object-cover object-top"
-                            onError={(e) => (e.currentTarget.src = "/drivers/default.avif")}
+                            onError={(e) => e.currentTarget.remove()}
                         />
 
                         <div className="text-center">
@@ -534,7 +536,7 @@ export default function StartSeason() {
                                 src={teamLogoSrc(team.name)}
                                 alt={team.name}
                                 className="h-5 w-5 object-contain"
-                                onError={(e) => (e.currentTarget.src = "/teams/default.avif")}
+                                onError={(e) => e.currentTarget.remove()}
                             />
                             <span>{team.name}</span>
                         </div>
