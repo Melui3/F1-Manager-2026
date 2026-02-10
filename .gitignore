@@ -5,8 +5,9 @@ __pycache__/
 *.sqlite3
 
 # Django
-.env
-.env.*
+.env*
+!.env.production
+!.env.development
 media/
 
 # Node
