@@ -1,7 +1,7 @@
 import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 
-import LoginScreen from "./pages/login.jsx";
+import LoginScreen from "./pages/LoginScreen.jsx";
 import RegisterScreen from "./pages/RegisterScreen";
 import ChooseTeam from "./pages/ChooseTeam";
 import ChooseDriver from "./pages/ChooseDriver";
