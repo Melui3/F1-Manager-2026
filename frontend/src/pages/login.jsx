@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useGame } from "../context/GameContext";
-import { login, apiFetch } from "../services/api";
+import { login } from "../services/api";
 
 export default function LoginScreen() {
     const [username, setUsername] = useState("");
@@ -25,20 +25,20 @@ export default function LoginScreen() {
         try {
             setLoading(true);
 
-            // 1) Login -> tokens
-            const tokens = await login(u, password); // { access, refresh }
+            // ✅ 1 seule requête maintenant
+            const res = await login(u, password);
+            // res = { access, refresh, username, avatar_key, avatar_url }
 
-            // 2) /me avec access direct (propre)
-            const me = await apiFetch("/api/auth/me/", {
-                headers: {
-                    Authorization: `Bearer ${tokens.access}`,
+            applyLogin({
+                tokens: { access: res.access, refresh: res.refresh },
+                me: {
+                    username: res.username || u,
+                    avatar_key: res.avatar_key || null,
+                    avatar_url: res.avatar_url || null,
                 },
+                fallbackUsername: u,
             });
 
-            // 3) Push dans le context (persist automatique)
-            applyLogin({ tokens, me, fallbackUsername: u });
-
-            // 4) go
             navigate("/choose-team");
         } catch (e) {
             console.error("Login error", e);
@@ -48,12 +48,12 @@ export default function LoginScreen() {
         }
     }
 
-    const logoUrl = `${import.meta.env.BASE_URL}logo-f1m-2026.png`;
+    const base = import.meta.env.BASE_URL || "/";
+    const logoUrl = `${base}logo-f1m-2026.png`;
 
     return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-gray-900 text-white px-4">
             <img src={logoUrl} alt="F1 Manager 2026" className="h-10 w-auto object-contain" />
-
             <h1 className="text-4xl font-bold mt-6 mb-6">F1 Manager 2026</h1>
 
             <div className="bg-gray-800 p-8 rounded-2xl shadow-md w-full max-w-sm border border-gray-700">
