@@ -4,7 +4,9 @@
 // ✅ Mets l'URL locale en dev via .env.development : VITE_API_BASE=http://127.0.0.1:8001
 console.log("VITE_API_BASE =", import.meta.env.VITE_API_BASE);
 console.log("API_BASE =", (import.meta.env.VITE_API_BASE || "").replace(/\/+$/, ""));
-const API_BASE = (import.meta.env.VITE_API_BASE || "").replace(/\/+$/, "");
+const API_BASE = import.meta.env.DEV
+    ? "http://127.0.0.1:8001"
+    : "https://f1-manager-2026.onrender.com";
 
 
 // Concat propre : joinUrl("https://x.com", "/api/teams/") => "https://x.com/api/teams/"
