@@ -47,11 +47,15 @@ function Row({ label, value }) {
 
 export default function TeamCard({ team, isSelected, onSelect, drivers = [], extra = null }) {
     const [open, setOpen] = useState(false);
+    const base = import.meta.env.BASE_URL;
 
     const teamName = team?.name ?? "Team";
     const teamKey = TEAM_KEY_MAP[teamName] || team?.team_key || null;
+
     const style = TEAM_STYLE[teamName] || "border-gray-700 shadow-black/0";
-    const logoSrc = teamKey ? `/teams/${teamKey}.avif` : "/teams/default.avif";
+
+    // ✅ GH Pages safe + ✅ no default image
+    const logoSrc = teamKey ? `${base}teams/${teamKey}.avif` : null;
 
     const shortName = extra?.shortName ?? teamName;
     const debut = extra?.debutF1 ?? "—";
@@ -66,25 +70,27 @@ export default function TeamCard({ team, isSelected, onSelect, drivers = [], ext
         >
             {/* header */}
             <div className="w-full h-32 bg-gray-900 flex items-center justify-center">
-                <img
-                    src={logoSrc}
-                    alt={teamName}
-                    className="h-20 w-20 object-contain"
-                    onError={(e) => (e.currentTarget.src = "/teams/default.avif")}
-                />
+                {logoSrc ? (
+                    <img
+                        src={logoSrc}
+                        alt={teamName}
+                        className="h-20 w-20 object-contain"
+                        onError={(e) => e.currentTarget.remove()}
+                    />
+                ) : (
+                    <div className="text-xs text-gray-500">Logo non disponible</div>
+                )}
             </div>
 
             <div className="p-4">
                 <div className="text-white font-extrabold uppercase text-lg leading-tight">{shortName}</div>
 
-                {/* mini badges */}
                 <div className="mt-2 flex flex-wrap gap-2">
                     <Badge>Drivers: {drivers.length}</Badge>
                     <Badge>CSTR: {cstr}</Badge>
                     <Badge>Debut: {debut}</Badge>
                 </div>
 
-                {/* highlight */}
                 {extra?.highlight && (
                     <div className="mt-3 text-sm text-gray-200 leading-snug">
                         <span className="text-gray-400">À retenir : </span>
@@ -92,7 +98,6 @@ export default function TeamCard({ team, isSelected, onSelect, drivers = [], ext
                     </div>
                 )}
 
-                {/* Bouton détails */}
                 <button
                     type="button"
                     className="mt-4 w-full rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold py-2 transition"
@@ -106,7 +111,6 @@ export default function TeamCard({ team, isSelected, onSelect, drivers = [], ext
 
                 {open && (
                     <div className="mt-3 rounded-xl bg-gray-900 border border-gray-700 p-3">
-                        {/* infos team */}
                         <div className="text-xs text-gray-400 mb-2">Infos team</div>
 
                         {extra ? (
@@ -136,7 +140,6 @@ export default function TeamCard({ team, isSelected, onSelect, drivers = [], ext
                             </div>
                         )}
 
-                        {/* pilotes */}
                         <div className="mt-3 text-xs text-gray-400 mb-2">Pilotes disponibles</div>
 
                         {drivers.length ? (

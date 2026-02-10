@@ -48,6 +48,8 @@ function listToChips(arr) {
 export default function DriverCard({ driver, isSelected, onSelect }) {
     const [showDetails, setShowDetails] = useState(false);
 
+    const base = import.meta.env.BASE_URL;
+
     const surname = driver?.surname ?? "";
     const name = driver?.name ?? "";
     const number = driver?.number ?? "";
@@ -58,17 +60,17 @@ export default function DriverCard({ driver, isSelected, onSelect }) {
     const key = useMemo(() => driverKey(driver), [driver]);
     const extra = useMemo(() => getDriverExtra(driver), [driver]);
 
+    // ✅ GH Pages safe + ✅ no default image
     const photoSrc =
         surname && number !== ""
-            ? `/drivers/${surname.toLowerCase()}_${number}.avif`
-            : "/drivers/default.avif";
+            ? `${base}drivers/${surname.toLowerCase()}_${number}.avif`
+            : null;
 
     const age2026 = useMemo(() => {
         const by = extra?.birthYear;
         return by ? 2026 - by : null;
     }, [extra]);
 
-    // Stats groups (pour un layout propre)
     const coreStats = [
         { label: "Vitesse", value: driver?.speed },
         { label: "Course", value: driver?.racing },
@@ -107,16 +109,19 @@ export default function DriverCard({ driver, isSelected, onSelect }) {
                 isSelected ? "ring-4 ring-red-500 border-red-500/40 scale-[1.01]" : "border-gray-800 hover:scale-[1.005]"
             )}
         >
-            {/* IMAGE */}
-            <div className="relative h-80 w-full overflow-hidden">
-                <img
-                    src={photoSrc}
-                    alt={fullName}
-                    className="absolute inset-0 w-full h-full object-cover object-top"
-                    onError={(e) => {
-                        e.currentTarget.src = "/drivers/default.avif";
-                    }}
-                />
+            {/* IMAGE (optional) */}
+            <div className="relative h-80 w-full overflow-hidden bg-gray-950">
+                {photoSrc ? (
+                    <img
+                        src={photoSrc}
+                        alt={fullName}
+                        className="absolute inset-0 w-full h-full object-cover object-top"
+                        onError={(e) => {
+                            // ✅ if missing, remove image (no fallback)
+                            e.currentTarget.remove();
+                        }}
+                    />
+                ) : null}
 
                 {/* overlay */}
                 <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/35 to-transparent p-4">
@@ -135,7 +140,6 @@ export default function DriverCard({ driver, isSelected, onSelect }) {
                         <div className="text-xl font-extrabold uppercase mt-1">{fullName}</div>
                         <div className="text-sm text-gray-300">{team}</div>
 
-                        {/* Style seulement si utile */}
                         {extra?.style && extra.style !== "—" && (
                             <div className="mt-2 text-sm text-gray-200">
                                 <span className="text-gray-400">Style : </span>
@@ -161,7 +165,6 @@ export default function DriverCard({ driver, isSelected, onSelect }) {
             {/* DETAILS */}
             {showDetails && (
                 <div className="p-4 bg-gray-900 border-t border-gray-800 space-y-3">
-                    {/* Infos + Tags */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <Section title="Infos">
                             <div className="space-y-1.5 text-sm">
@@ -183,7 +186,6 @@ export default function DriverCard({ driver, isSelected, onSelect }) {
                         ) : null}
                     </div>
 
-                    {/* Stats backend */}
                     <Section title="Stats (backend)">
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                             {coreStats.map((s) => (
@@ -191,7 +193,6 @@ export default function DriverCard({ driver, isSelected, onSelect }) {
                             ))}
                         </div>
 
-                        {/* second row compact */}
                         <div className="mt-2 grid grid-cols-2 sm:grid-cols-5 gap-2">
                             {consistencyStats.map((s) => (
                                 <Stat key={s.label} label={s.label} value={s.value} />
@@ -202,7 +203,6 @@ export default function DriverCard({ driver, isSelected, onSelect }) {
                         </div>
                     </Section>
 
-                    {/* Profil manuel (seulement si tu as du contenu) */}
                     {hasManual ? (
                         <Section title="Profil (manuel)">
                             <div className="space-y-3">
