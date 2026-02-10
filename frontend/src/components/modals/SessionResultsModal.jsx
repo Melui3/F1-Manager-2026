@@ -1,9 +1,28 @@
 import React, { useMemo } from "react";
 import Modal from "./Modal";
 
-const norm = (s) => String(s ?? "").trim().toLowerCase();
+const clean = (s) =>
+    String(s ?? "")
+        .trim()
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]+/g, "");
 
-// ===== UI stats (duplication volontaire pour avoir 2 fichiers seulement) =====
+const num = (x) => {
+    const n = Number(String(x ?? "").trim());
+    return Number.isFinite(n) ? n : null;
+};
+
+const sameDriver = (a, b) => {
+    const aSurname = clean(a?.surname ?? a?.last_name);
+    const bSurname = clean(b?.surname ?? b?.last_name);
+    const aNum = num(a?.number ?? a?.driver_number);
+    const bNum = num(b?.number ?? b?.driver_number);
+    return !!aSurname && !!bSurname && aSurname === bSurname && aNum !== null && aNum === bNum;
+};
+
+// ===== UI stats =====
 function StatCell({ label, value, delta }) {
     const d = typeof delta === "number" ? delta : null;
     const deltaTxt = d === null ? null : d > 0 ? `+${d}` : `${d}`;
@@ -63,15 +82,20 @@ export default function SessionResultsModal({
 
     const sorted = useMemo(() => {
         const arr = [...safeResults];
+
+        // ✅ Si pas de "position" backend, on crée un fallback (ordre actuel)
+        const hasPos = arr.some((r) => r?.position != null);
+        if (!hasPos) {
+            return arr.map((r, idx) => ({ ...r, position: idx + 1 }));
+        }
+
         arr.sort((a, b) => (a?.position ?? 999) - (b?.position ?? 999));
         return arr;
     }, [safeResults]);
 
-    const playerKey = `${norm(player?.surname)}_${player?.number}`;
-
     const playerRow = useMemo(() => {
-        return sorted.find((r) => `${norm(r?.surname)}_${r?.number}` === playerKey) || null;
-    }, [sorted, playerKey]);
+        return sorted.find((r) => sameDriver(r, player)) || null;
+    }, [sorted, player]);
 
     return (
         <Modal
@@ -89,7 +113,7 @@ export default function SessionResultsModal({
                 </div>
             }
         >
-            {/* Stats pilote dans la modal */}
+            {/* Stats pilote */}
             <div className="rounded-2xl border border-gray-700 bg-gray-900/30 p-4 mb-4">
                 <div className="text-xs text-gray-400 mb-2">Stats pilote</div>
                 <StatsGrid stats={playerStats} prevStats={prevPlayerStats} />
@@ -110,7 +134,9 @@ export default function SessionResultsModal({
                         </div>
                     </div>
                 ) : (
-                    <div className="mt-2 text-gray-300">Pas trouvé dans les résultats (check surname/number côté backend).</div>
+                    <div className="mt-2 text-gray-300">
+                        Pas trouvé dans les résultats. (Le backend ne renvoie peut-être pas surname/number comme attendu.)
+                    </div>
                 )}
             </div>
 
