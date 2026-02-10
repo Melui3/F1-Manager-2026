@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useGame } from "../context/GameContext";
 
@@ -6,33 +6,35 @@ export default function Header({ userName: userNameProp, userAvatar: userAvatarP
     const nav = useNavigate();
     const { userName: userNameCtx, userAvatar: userAvatarCtx } = useGame();
 
-    const base = import.meta.env.BASE_URL; // ex: "/F1-Manager-2026/"
+    const base = import.meta.env.BASE_URL || "/";
+
     const userName = userNameProp ?? userNameCtx ?? "";
 
     // Logo GH Pages safe
     const logoUrl = `${base}logo-f1m-2026.png`;
 
-    // Avatar : NO fallback image. If missing => show placeholder.
+    // Avatar brut venant du context ou props
     const rawAvatar = userAvatarProp ?? userAvatarCtx ?? null;
 
-    const avatarSrc = rawAvatar
-        ? (String(rawAvatar).startsWith("http")
-            ? String(rawAvatar)
-            : `${base}${String(rawAvatar).replace(/^\//, "")}`)
-        : null;
+    // Etat local : avatar valide ou non
+    const [avatarOk, setAvatarOk] = useState(!!rawAvatar);
 
-    // Placeholder (no-image)
-    const initials = (userName || "?")
-        .split(" ")
-        .filter(Boolean)
-        .slice(0, 2)
-        .map((w) => w[0]?.toUpperCase())
-        .join("");
+    // URL finale (NE PAS renormaliser si déjà absolue)
+    const avatarSrc =
+        rawAvatar && avatarOk
+            ? (String(rawAvatar).startsWith("http")
+                ? String(rawAvatar)
+                : `${base}${String(rawAvatar).replace(/^\//, "")}`)
+            : null;
 
     return (
         <header className="flex items-center justify-between p-4 bg-gray-900 text-white shadow-md">
             <div className="flex items-center gap-3">
-                <img src={logoUrl} alt="F1 Manager 2026" className="h-10 w-auto object-contain" />
+                <img
+                    src={logoUrl}
+                    alt="F1 Manager 2026"
+                    className="h-10 w-auto object-contain"
+                />
                 <h1 className="text-xl font-bold">F1 Manager 2026</h1>
             </div>
 
@@ -44,20 +46,16 @@ export default function Header({ userName: userNameProp, userAvatar: userAvatarP
             >
                 <span className="text-sm font-semibold">{userName}</span>
 
-                {avatarSrc ? (
+                {avatarSrc && (
                     <img
                         src={avatarSrc}
                         alt="Avatar"
                         className="h-8 w-8 rounded-full object-cover border border-gray-700"
-                        // If avatar URL is broken: just hide it and keep placeholder next renders
-                        onError={(e) => {
-                            e.currentTarget.style.display = "none";
+                        onError={() => {
+                            // 🔥 IMPORTANT : on coupe la source à la racine
+                            setAvatarOk(false);
                         }}
                     />
-                ) : (
-                    <div className="h-8 w-8 rounded-full border border-gray-700 bg-gray-800 flex items-center justify-center text-xs font-black">
-                        {initials || "?"}
-                    </div>
                 )}
             </button>
         </header>

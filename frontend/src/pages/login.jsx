@@ -10,7 +10,7 @@ export default function LoginScreen() {
     const [loading, setLoading] = useState(false);
 
     const navigate = useNavigate();
-    const { setUserName } = useGame();
+    const { applyLogin } = useGame();
 
     async function handleSubmit(e) {
         e.preventDefault();
@@ -25,17 +25,20 @@ export default function LoginScreen() {
         try {
             setLoading(true);
 
-            // 🔥 LOGIN → récupère directement les tokens
+            // 1) Login -> tokens
             const tokens = await login(u, password); // { access, refresh }
 
-            // 🔥 APPEL /me AVEC LE TOKEN DIRECT (pas via localStorage)
+            // 2) /me avec access direct (propre)
             const me = await apiFetch("/api/auth/me/", {
                 headers: {
                     Authorization: `Bearer ${tokens.access}`,
                 },
             });
 
-            setUserName(me?.username || u);
+            // 3) Push dans le context (persist automatique)
+            applyLogin({ tokens, me, fallbackUsername: u });
+
+            // 4) go
             navigate("/choose-team");
         } catch (e) {
             console.error("Login error", e);
@@ -45,16 +48,12 @@ export default function LoginScreen() {
         }
     }
 
-    const logoUrl = `${window.location.origin}${import.meta.env.BASE_URL}logo-f1m-2026.png`;
+    const logoUrl = `${import.meta.env.BASE_URL}logo-f1m-2026.png`;
 
     return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-gray-900 text-white px-4">
+            <img src={logoUrl} alt="F1 Manager 2026" className="h-10 w-auto object-contain" />
 
-            <img
-                src={logoUrl}
-                alt="F1 Manager 2026"
-                className="h-10 w-auto object-contain"
-            />
             <h1 className="text-4xl font-bold mt-6 mb-6">F1 Manager 2026</h1>
 
             <div className="bg-gray-800 p-8 rounded-2xl shadow-md w-full max-w-sm border border-gray-700">
@@ -94,7 +93,6 @@ export default function LoginScreen() {
                     </button>
                 </form>
 
-                {/* ✅ futur accès inscription */}
                 <div className="mt-4 text-sm text-gray-300">
                     Pas de compte ?{" "}
                     <Link to="/register" className="text-red-400 hover:text-red-300 font-semibold">

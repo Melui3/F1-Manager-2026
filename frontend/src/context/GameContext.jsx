@@ -1,21 +1,20 @@
 // src/context/GameContext.jsx
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 
 const GameContext = createContext(null);
-const STORAGE_KEY = "f1m26_game";
 
-const base = import.meta.env.BASE_URL; // ex: "/F1-Manager-2026/"
+// 2 clés distinctes = plus propre
+const STORAGE_USER = "f1m26_user";
+const STORAGE_GAME = "f1m26_game";
 
-// Helper: build a GH Pages-safe asset URL from an avatar key
+const base = import.meta.env.BASE_URL || "/";
+
+// Helpers
 function avatarUrlFromKey(key) {
     if (!key) return null;
-    // Adapte l'extension si tes fichiers sont en .png
-    return `${base}avatars/${key}.jpg`;
+    return `${base}avatars/${key}.jpg`; // change en .png si besoin
 }
 
-// Helper: normalize backend urls:
-// - if url is absolute (http/https) keep it
-// - if url is "/avatars/x.jpg" convert to BASE_URL + "avatars/x.jpg"
 function normalizeUrl(url) {
     if (!url) return null;
     const s = String(url);
@@ -23,125 +22,182 @@ function normalizeUrl(url) {
     return `${base}${s.replace(/^\//, "")}`;
 }
 
+function safeParse(raw) {
+    try {
+        return raw ? JSON.parse(raw) : null;
+    } catch {
+        return null;
+    }
+}
+
 export function GameProvider({ children }) {
     const [ready, setReady] = useState(false);
 
-    // Profile
+    // ===== USER / AUTH =====
     const [userName, setUserName] = useState("");
-    const [avatarKey, setAvatarKey] = useState(null);     // <- plus "default"
-    const [userAvatar, setUserAvatar] = useState(null);   // <- plus default.jpg
+    const [avatarKey, setAvatarKey] = useState(null);
+    const [userAvatar, setUserAvatar] = useState(null);
 
-    // Game
-    const [team, setTeam] = useState(null);
-    const [driver, setDriver] = useState(null);
-
-    // Auth
     const [accessToken, setAccessToken] = useState(null);
     const [refreshToken, setRefreshToken] = useState(null);
 
-    // Load from localStorage
+    // ===== GAME =====
+    const [team, setTeam] = useState(null);
+    const [driver, setDriver] = useState(null);
+
+    // Simulation “progress”
+    // (tu peux enrichir quand tu veux : calendar, standings, results, currentRace, etc.)
+    const [sim, setSim] = useState({
+        season: 2026,
+        currentRound: 0,
+        lastResults: null,
+        standings: null,
+    });
+
+    // ===== LOAD =====
     useEffect(() => {
-        try {
-            const raw = localStorage.getItem(STORAGE_KEY);
-            if (raw) {
-                const p = JSON.parse(raw);
+        const u = safeParse(localStorage.getItem(STORAGE_USER));
+        const g = safeParse(localStorage.getItem(STORAGE_GAME));
 
-                setUserName(p.userName || "");
-                setAvatarKey(p.avatarKey || null);
-                setUserAvatar(p.userAvatar || null);
-
-                setTeam(p.team || null);
-                setDriver(p.driver || null);
-
-                setAccessToken(p.accessToken || null);
-                setRefreshToken(p.refreshToken || null);
-            }
-        } catch (e) {
-            console.warn("GameContext load failed", e);
-        } finally {
-            setReady(true);
+        if (u) {
+            setUserName(u.userName || "");
+            setAvatarKey(u.avatarKey || null);
+            setUserAvatar(u.userAvatar || null);
+            setAccessToken(u.accessToken || null);
+            setRefreshToken(u.refreshToken || null);
         }
+
+        if (g) {
+            setTeam(g.team || null);
+            setDriver(g.driver || null);
+            setSim(
+                g.sim || {
+                    season: 2026,
+                    currentRound: 0,
+                    lastResults: null,
+                    standings: null,
+                }
+            );
+        }
+
+        setReady(true);
     }, []);
 
-    // Persist to localStorage
+    // ===== SAVE =====
     useEffect(() => {
         if (!ready) return;
+
         localStorage.setItem(
-            STORAGE_KEY,
+            STORAGE_USER,
             JSON.stringify({
                 userName,
                 avatarKey,
                 userAvatar,
-                team,
-                driver,
                 accessToken,
                 refreshToken,
             })
         );
-    }, [ready, userName, avatarKey, userAvatar, team, driver, accessToken, refreshToken]);
+    }, [ready, userName, avatarKey, userAvatar, accessToken, refreshToken]);
 
-    // Called after successful login
-    // Expecting something like: { userName, access, refresh, avatar_key, avatar_url }
-    const login = ({ userName, access, refresh, avatar_key, avatar_url }) => {
-        setUserName(userName || "");
-        setAccessToken(access || null);
-        setRefreshToken(refresh || null);
+    useEffect(() => {
+        if (!ready) return;
 
-        // Priority: avatar_url if provided, else avatar_key, else null
-        if (avatar_url) {
-            setUserAvatar(normalizeUrl(avatar_url));
-            setAvatarKey(avatar_key || null);
-            return;
+        localStorage.setItem(
+            STORAGE_GAME,
+            JSON.stringify({
+                team,
+                driver,
+                sim,
+            })
+        );
+    }, [ready, team, driver, sim]);
+
+    // ===== ACTIONS =====
+
+    // Appelé après login
+    // me peut contenir avatar_key/avatar_url
+    const applyLogin = ({ tokens, me, fallbackUsername }) => {
+        const access = tokens?.access || null;
+        const refresh = tokens?.refresh || null;
+
+        setAccessToken(access);
+        setRefreshToken(refresh);
+
+        const name = me?.username || fallbackUsername || "";
+        setUserName(name);
+
+        const aKey = me?.avatar_key || null;
+        const aUrl = me?.avatar_url || null;
+
+        if (aUrl) {
+            setUserAvatar(normalizeUrl(aUrl));
+            setAvatarKey(aKey);
+        } else if (aKey) {
+            setAvatarKey(aKey);
+            setUserAvatar(avatarUrlFromKey(aKey));
         }
+    };
 
-        if (avatar_key) {
-            setAvatarKey(avatar_key);
-            setUserAvatar(avatarUrlFromKey(avatar_key));
-            return;
+    const applyAvatar = ({ avatar_key, avatar_url }) => {
+        const aKey = avatar_key || null;
+        const aUrl = avatar_url || null;
+
+        setAvatarKey(aKey);
+
+        if (aUrl) {
+            setUserAvatar(normalizeUrl(aUrl));
+        } else if (aKey) {
+            setUserAvatar(avatarUrlFromKey(aKey));
+        } else {
+            setUserAvatar(null);
         }
-
-        setAvatarKey(null);
-        setUserAvatar(null);
     };
 
     const logout = () => {
         setUserName("");
         setAvatarKey(null);
         setUserAvatar(null);
-        setTeam(null);
-        setDriver(null);
         setAccessToken(null);
         setRefreshToken(null);
-        localStorage.removeItem(STORAGE_KEY);
+
+        setTeam(null);
+        setDriver(null);
+        setSim({ season: 2026, currentRound: 0, lastResults: null, standings: null });
+
+        localStorage.removeItem(STORAGE_USER);
+        localStorage.removeItem(STORAGE_GAME);
     };
+
+    const isAuthenticated = useMemo(() => !!accessToken, [accessToken]);
 
     return (
         <GameContext.Provider
             value={{
                 ready,
 
-                // Profile
+                // User
                 userName,
                 setUserName,
                 avatarKey,
-                setAvatarKey,
                 userAvatar,
-                setUserAvatar,
-
-                // Game
-                team,
-                setTeam,
-                driver,
-                setDriver,
 
                 // Auth
                 accessToken,
                 refreshToken,
                 setAccessToken,
                 setRefreshToken,
-                login,
+                isAuthenticated,
+                applyLogin,
+                applyAvatar,
                 logout,
-                isAuthenticated: !!accessToken,
+
+                // Game
+                team,
+                setTeam,
+                driver,
+                setDriver,
+                sim,
+                setSim,
             }}
         >
             {children}
