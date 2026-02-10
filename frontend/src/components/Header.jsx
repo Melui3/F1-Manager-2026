@@ -11,6 +11,12 @@ export default function Header({ userName: userNameProp, userAvatar: userAvatarP
     const userName = userNameProp ?? userNameCtx ?? "";
     const userAvatar = userAvatarProp ?? userAvatarCtx ?? "/avatars/default.jpg";
     const logoUrl = `${window.location.origin}${import.meta.env.BASE_URL}logo-f1m-2026.png`;
+    const base = import.meta.env.BASE_URL;
+    const fallback = `${base}avatars/default.jpg`;
+
+    const avatarSrc = userAvatar?.startsWith("http")
+        ? userAvatar
+        : `${base}${String(userAvatar || "avatars/default.jpg").replace(/^\//, "")}`;
 
     return (
         <header className="flex items-center justify-between p-4 bg-gray-900 text-white shadow-md">
@@ -29,10 +35,8 @@ export default function Header({ userName: userNameProp, userAvatar: userAvatarP
             >
                 <span className="text-sm font-semibold">{userName}</span>
                 <img
-                    src={userAvatar}
-                    alt="Avatar"
-                    className="h-8 w-8 rounded-full object-cover border border-gray-700"
-                    onError={(e) => (e.currentTarget.src = "/avatars/default.jpg")}
+                    src={avatarSrc}
+                    onError={(e) => (e.currentTarget.src = fallback)}
                 />
             </button>
         </header>
