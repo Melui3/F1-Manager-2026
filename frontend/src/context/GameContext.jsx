@@ -138,19 +138,8 @@ export function GameProvider({ children }) {
         }
     };
 
-    const applyAvatar = ({ avatar_key, avatar_url }) => {
-        const aKey = avatar_key || null;
-        const aUrl = avatar_url || null;
-
-        setAvatarKey(aKey);
-
-        if (aUrl) {
-            setUserAvatar(normalizeUrl(aUrl));
-        } else if (aKey) {
-            setUserAvatar(avatarUrlFromKey(aKey));
-        } else {
-            setUserAvatar(null);
-        }
+    const applyAvatar = ({ avatar_key }) => {
+        setAvatarKey(avatar_key || null);
     };
 
     const logout = () => {
