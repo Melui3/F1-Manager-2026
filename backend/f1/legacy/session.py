@@ -2,6 +2,17 @@ from datetime import date
 import random
 
 # ----------------------
+# HELPERS
+# ----------------------
+
+def clamp(v, lo=0, hi=100):
+    try:
+        v = int(v)
+    except Exception:
+        v = lo
+    return max(lo, min(hi, v))
+
+# ----------------------
 # CLASSES DE SESSIONS
 # ----------------------
 
@@ -17,25 +28,35 @@ class Session:
     def simulate(self, drivers):
         raise NotImplementedError("Cette méthode doit être surchargée dans les sous-classes")
 
+    def _affinity_bonus(self, driver):
+        bonus = 0
+        if self.circuit_type == "street":
+            bonus += int(getattr(driver, "street_circuit_affinity", 0) or 0)
+        elif self.circuit_type == "high_speed":
+            bonus += int(getattr(driver, "high_speed_circuit_affinity", 0) or 0)
+        elif self.circuit_type == "wet":
+            bonus += int(getattr(driver, "wet_circuit_affinity", 0) or 0)
+        return bonus
+
 # --- Free Practice ---
 class FreePractice(Session):
     def simulate(self, drivers):
         results = []
         for driver in drivers:
-            stats_boost = random.randint(1, 5)
-            if self.circuit_type == "street":
-                stats_boost += driver.street_circuit_affinity
-            elif self.circuit_type == "high_speed":
-                stats_boost += driver.high_speed_circuit_affinity
-            elif self.circuit_type == "wet":
-                stats_boost += driver.wet_circuit_affinity
+            stats_boost = random.randint(1, 5) + self._affinity_bonus(driver)
 
-            driver.speed += stats_boost
-            driver.racing += stats_boost
-            driver.reaction += stats_boost
-            driver.experience += stats_boost // 2
+            # ✅ clamp pour éviter explosion
+            driver.speed = clamp(driver.speed + stats_boost)
+            driver.racing = clamp(driver.racing + stats_boost)
+            driver.reaction = clamp(driver.reaction + stats_boost)
+            driver.experience = clamp(driver.experience + (stats_boost // 2))
 
-            results.append({"driver": driver, "points_gained": 0, "stats_gained": stats_boost})
+            results.append({
+                "driver": driver,
+                "points_gained": 0,
+                "stats_gained": stats_boost
+            })
+
         self.results = results
         return results
 
@@ -45,45 +66,77 @@ class Qualifying(Session):
         results = []
         for driver in drivers:
             stats_boost = random.randint(3, 10)
-            if random.randint(1, 100) < driver.error_rate:
+
+            # pénalité d'erreur
+            err = int(getattr(driver, "error_rate", 0) or 0)
+            if random.randint(1, 100) < err:
                 stats_boost = max(0, stats_boost - 5)
-            driver.speed += stats_boost
-            driver.reaction += stats_boost
-            results.append({"driver": driver, "points_gained": 0, "stats_gained": stats_boost})
+
+            driver.speed = clamp(driver.speed + stats_boost)
+            driver.reaction = clamp(driver.reaction + stats_boost)
+
+            results.append({
+                "driver": driver,
+                "points_gained": 0,
+                "stats_gained": stats_boost
+            })
+
+        # Qualif : on ordonne par perf simulée (stats_gained)
         results.sort(key=lambda r: r["stats_gained"], reverse=True)
         self.results = results
         return results
 
-# --- Sprint (pour les courses sprint) ---
+# --- Sprint ---
 class Sprint(Session):
     def simulate(self, drivers):
         results = []
         points_distribution = [10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
+
+        # NOTE: si tu veux plus réaliste: pondère par stats plutôt que random()
         drivers_sorted = sorted(drivers, key=lambda d: random.random())
+
         for i, driver in enumerate(drivers_sorted):
             stats_boost = random.randint(5, 12)
             points = points_distribution[i] if i < len(points_distribution) else 0
-            driver.points += points
-            driver.speed += stats_boost
-            driver.racing += stats_boost
-            results.append({"driver": driver, "points_gained": points, "stats_gained": stats_boost})
+
+            driver.points = int(getattr(driver, "points", 0) or 0) + points
+            driver.speed = clamp(driver.speed + stats_boost)
+            driver.racing = clamp(driver.racing + stats_boost)
+
+            results.append({
+                "driver": driver,
+                "points_gained": points,
+                "stats_gained": stats_boost,
+                "position": i + 1,   # ✅ utile si tu veux renvoyer direct
+            })
+
         self.results = results
         return results
 
-# --- Grand Prix (course principale) ---
+# --- Grand Prix ---
 class GrandPrix(Session):
     def simulate(self, drivers):
         results = []
         points_distribution = [25, 18, 15, 12, 10, 8, 6, 4, 2, 1]
+
         drivers_sorted = sorted(drivers, key=lambda d: random.random())
+
         for i, driver in enumerate(drivers_sorted):
             stats_boost = random.randint(5, 20)
             points = points_distribution[i] if i < len(points_distribution) else 0
-            driver.points += points
-            driver.speed += stats_boost
-            driver.racing += stats_boost
-            driver.reaction += stats_boost
-            results.append({"driver": driver, "points_gained": points, "stats_gained": stats_boost})
+
+            driver.points = int(getattr(driver, "points", 0) or 0) + points
+            driver.speed = clamp(driver.speed + stats_boost)
+            driver.racing = clamp(driver.racing + stats_boost)
+            driver.reaction = clamp(driver.reaction + stats_boost)
+
+            results.append({
+                "driver": driver,
+                "points_gained": points,
+                "stats_gained": stats_boost,
+                "position": i + 1,   # ✅ utile si tu veux renvoyer direct
+            })
+
         self.results = results
         return results
 
@@ -117,7 +170,7 @@ gp_list = [
     {"name": "Brazilian GP", "circuit": "Interlagos Circuit", "date": date(2026, 11, 8), "has_sprint": False, "circuit_type": "high_speed"},
     {"name": "Las Vegas GP", "circuit": "Las Vegas Street Circuit", "date": date(2026, 11, 21), "has_sprint": False, "circuit_type": "street"},
     {"name": "Qatar GP", "circuit": "Losail International Circuit", "date": date(2026, 11, 29), "has_sprint": False, "circuit_type": "high_speed"},
-    {"name": "Abu Dhabi GP", "circuit": "Yas Marina Circuit", "date": date(2026, 12, 6), "has_sprint": False, "circuit_type": "high_speed"}
+    {"name": "Abu Dhabi GP", "circuit": "Yas Marina Circuit", "date": date(2026, 12, 6), "has_sprint": False, "circuit_type": "high_speed"},
 ]
 
 for gp in gp_list:
