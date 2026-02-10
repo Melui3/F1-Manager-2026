@@ -15,10 +15,11 @@ const num = (x) => {
 };
 
 const sameDriver = (a, b) => {
-    const aSurname = clean(a?.surname ?? a?.last_name);
-    const bSurname = clean(b?.surname ?? b?.last_name);
-    const aNum = num(a?.number ?? a?.driver_number);
-    const bNum = num(b?.number ?? b?.driver_number);
+    if (!a || !b) return false;
+    const aSurname = clean(a?.surname);
+    const bSurname = clean(b?.surname);
+    const aNum = num(a?.number);
+    const bNum = num(b?.number);
     return !!aSurname && !!bSurname && aSurname === bSurname && aNum !== null && aNum === bNum;
 };
 
@@ -83,11 +84,8 @@ export default function SessionResultsModal({
     const sorted = useMemo(() => {
         const arr = [...safeResults];
 
-        // ✅ Si pas de "position" backend, on crée un fallback (ordre actuel)
         const hasPos = arr.some((r) => r?.position != null);
-        if (!hasPos) {
-            return arr.map((r, idx) => ({ ...r, position: idx + 1 }));
-        }
+        if (!hasPos) return arr.map((r, idx) => ({ ...r, position: idx + 1 }));
 
         arr.sort((a, b) => (a?.position ?? 999) - (b?.position ?? 999));
         return arr;
@@ -135,7 +133,7 @@ export default function SessionResultsModal({
                     </div>
                 ) : (
                     <div className="mt-2 text-gray-300">
-                        Pas trouvé dans les résultats. (Le backend ne renvoie peut-être pas surname/number comme attendu.)
+                        Pas trouvé dans les résultats. (Vérifie number/surname côté player sélectionné.)
                     </div>
                 )}
             </div>
