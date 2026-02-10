@@ -156,7 +156,7 @@ export default function StartSeason() {
     if (!team || !driver) {
         return (
             <div className="min-h-screen bg-gray-900 text-white flex flex-col">
-                <Header userName={userName} userAvatar="/user.png" />
+                <Header userName={userName} />
                 <main className="flex-1 p-6 flex items-center justify-center">
                     <div className="text-center">
                         <h1 className="text-3xl font-extrabold mb-2">Team ou pilote manquant</h1>
@@ -339,7 +339,7 @@ export default function StartSeason() {
 
     return (
         <div className="min-h-screen bg-gray-900 flex flex-col text-white">
-            <Header userName={userName} userAvatar="/user.png" />
+            <Header userName={userName} />
 
             <main className="flex-1 p-6 flex flex-col lg:flex-row gap-6">
                 {/* LEFT */}

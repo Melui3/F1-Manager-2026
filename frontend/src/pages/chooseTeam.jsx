@@ -73,7 +73,7 @@ export default function ChooseTeam() {
     if (loading) {
         return (
             <div className="min-h-screen bg-gray-900 text-white flex flex-col">
-                <Header userName={userName} userAvatar="/user.png" />
+                <Header userName={userName} />
                 <main className="flex-1 p-6">
                     <div className="text-lg">Chargement des teams…</div>
                 </main>
@@ -86,7 +86,7 @@ export default function ChooseTeam() {
 
     return (
         <div className="min-h-screen bg-gray-900 text-white flex flex-col">
-            <Header userName={userName} userAvatar="/user.png" />
+            <Header userName={userName} />
 
             <main className="flex-1 p-6 flex flex-col lg:flex-row gap-6">
                 {/* GAUCHE */}
