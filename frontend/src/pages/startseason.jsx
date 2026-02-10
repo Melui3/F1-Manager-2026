@@ -37,6 +37,28 @@ const TEAM_STYLE = {
 
 const norm = (s) => String(s ?? "").trim().toLowerCase();
 
+// ✅ robust helpers (accents, tirets, num string/number)
+const clean = (s) =>
+    String(s ?? "")
+        .trim()
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]+/g, "");
+
+const getNumber = (x) => {
+    const n = Number(String(x ?? "").trim());
+    return Number.isFinite(n) ? n : null;
+};
+
+const isSameDriver = (a, b) => {
+    const aSurname = clean(a?.surname ?? a?.last_name);
+    const bSurname = clean(b?.surname ?? b?.last_name);
+    const aNum = getNumber(a?.number ?? a?.driver_number);
+    const bNum = getNumber(b?.number ?? b?.driver_number);
+    return !!aSurname && !!bSurname && aSurname === bSurname && aNum !== null && aNum === bNum;
+};
+
 // === images frontend: public/drivers/surname_lower_number.avif
 function driverImgSrc(d) {
     const base = import.meta.env.BASE_URL || "/";
@@ -221,18 +243,31 @@ export default function StartSeason() {
 
     const toggleGp = (gpName) => setExpandedGp((cur) => (cur === gpName ? null : gpName));
 
-    // points joueur depuis leaderboard (match surname+number)
+    // ✅ points joueur depuis leaderboard (matching robuste)
     const playerRow = useMemo(() => {
-        const key = `${norm(driver?.surname)}_${driver?.number}`;
-        return driversBoard.find((d) => `${norm(d?.surname)}_${d?.number}` === key) || null;
+        return driversBoard.find((d) => isSameDriver(d, driver)) || null;
     }, [driversBoard, driver]);
+
+    // ✅ DEBUG: log + expose dans window
+    useEffect(() => {
+        if (playerRow) {
+            console.log("[playerRow]", playerRow);
+            window.__playerRow = playerRow;
+        }
+    }, [playerRow]);
+
+    useEffect(() => {
+        if (lastResults?.length) {
+            console.log("[lastResults[0]]", lastResults[0]);
+            window.__lastResult0 = lastResults[0];
+        }
+    }, [lastResults]);
 
     const playerPoints = playerRow?.points ?? 0;
 
-    // résultat joueur dans lastResults
+    // ✅ résultat joueur dans lastResults (matching robuste)
     const playerLast = useMemo(() => {
-        const key = `${norm(driver?.surname)}_${driver?.number}`;
-        return lastResults.find((r) => `${norm(r?.surname)}_${r?.number}` === key) || null;
+        return lastResults.find((r) => isSameDriver(r, driver)) || null;
     }, [lastResults, driver, resultsTick]);
 
     // set playerStats depuis board (après refresh)
@@ -243,11 +278,15 @@ export default function StartSeason() {
                 racing: playerRow.racing,
                 reaction: playerRow.reaction,
                 experience: playerRow.experience,
+
+                // ⚠️ si backend renvoie d’autres noms, tu les verras dans [playerRow]
                 consistency: playerRow.consistency,
                 error_rate: playerRow.error_rate,
+
                 street: playerRow.street_circuit_affinity,
                 high: playerRow.high_speed_circuit_affinity,
                 wet: playerRow.wet_circuit_affinity,
+
                 points: playerRow.points,
             });
         }
@@ -270,7 +309,10 @@ export default function StartSeason() {
             const meta = metaOverride || flatSessions.find((s) => s?.index === sessionIndex) || null;
             setLastSessionMeta(meta);
 
-            const url = force ? `/api/simulate/session/${sessionIndex}/?force=1` : `/api/simulate/session/${sessionIndex}/`;
+            const url = force
+                ? `/api/simulate/session/${sessionIndex}/?force=1`
+                : `/api/simulate/session/${sessionIndex}/`;
+
             const res = await apiFetch(url, { method: "POST", body: JSON.stringify({}) });
 
             const results = Array.isArray(res?.results) ? res.results : [];
@@ -293,7 +335,10 @@ export default function StartSeason() {
         const meta = metaOverride || flatSessions.find((s) => s?.index === sessionIndex) || null;
         setLastSessionMeta(meta);
 
-        const url = force ? `/api/simulate/session/${sessionIndex}/?force=1` : `/api/simulate/session/${sessionIndex}/`;
+        const url = force
+            ? `/api/simulate/session/${sessionIndex}/?force=1`
+            : `/api/simulate/session/${sessionIndex}/`;
+
         const res = await apiFetch(url, { method: "POST", body: JSON.stringify({}) });
 
         const results = Array.isArray(res?.results) ? res.results : [];
@@ -315,18 +360,18 @@ export default function StartSeason() {
         if (!remaining.length) return;
 
         try {
-            if (playerStats) setPrevPlayerStats(playerStats);
-
             simAllAbortRef.current = false;
             setSimAllLoading(true);
             setError(null);
             setSimAllProgress({ done: 0, total: remaining.length });
 
-            // Option: fermer la modal pendant la série
             setSessionModalOpen(false);
 
             for (let i = 0; i < remaining.length; i++) {
                 if (simAllAbortRef.current) break;
+
+                // ✅ delta session-par-session
+                if (playerStats) setPrevPlayerStats(playerStats);
 
                 const s = remaining[i];
                 await simulateOneSilent(s.index, force, s);
@@ -334,7 +379,6 @@ export default function StartSeason() {
                 setSimAllProgress({ done: i + 1, total: remaining.length });
             }
 
-            // Ouvre la modal seulement à la fin (ou au stop: dernière session effectuée)
             setSessionModalOpen(true);
         } catch (e) {
             console.error(e);
@@ -444,8 +488,8 @@ export default function StartSeason() {
 
                     {nextSession && (
                         <div className="text-xs text-gray-400">
-                            Prochaine session : <b className="text-gray-200">{nextSession.gp_name}</b> • {nextSession.session_type} • index{" "}
-                            {nextSession.index}
+                            Prochaine session : <b className="text-gray-200">{nextSession.gp_name}</b> • {nextSession.session_type} •
+                            index {nextSession.index}
                         </div>
                     )}
 
@@ -573,7 +617,6 @@ export default function StartSeason() {
 
                 {/* RIGHT */}
                 <aside className="w-full lg:w-80 flex flex-col gap-6">
-                    {/* Player */}
                     <div className={`bg-gray-800 border-2 rounded-2xl p-4 shadow-lg flex flex-col items-center gap-2 ${teamBorder}`}>
                         <button
                             onClick={() => {
@@ -630,7 +673,6 @@ export default function StartSeason() {
                         </button>
                     </div>
 
-                    {/* Leaderboard */}
                     <div className="bg-gray-800 border-2 border-gray-700 rounded-2xl p-4 shadow-lg">
                         <div className="flex items-center justify-between mb-3">
                             <h2 className="font-bold text-lg text-red-500">Leaderboard</h2>
@@ -649,12 +691,14 @@ export default function StartSeason() {
                         ) : (
                             <div className="flex flex-col gap-1">
                                 {driversBoard.map((d, idx) => {
-                                    const isPlayer = `${norm(d?.surname)}_${d?.number}` === `${norm(driver?.surname)}_${driver?.number}`;
+                                    const isPlayer = isSameDriver(d, driver);
 
                                     return (
                                         <div
                                             key={`${d.surname}_${d.number}`}
-                                            className={`flex justify-between p-2 rounded-xl ${isPlayer ? "bg-gray-700 font-semibold" : "bg-gray-900/30"}`}
+                                            className={`flex justify-between p-2 rounded-xl ${
+                                                isPlayer ? "bg-gray-700 font-semibold" : "bg-gray-900/30"
+                                            }`}
                                         >
                       <span className="text-sm">
                         {idx + 1}. {d.name} {d.surname} <span className="text-gray-400">({d.team})</span>
@@ -669,7 +713,6 @@ export default function StartSeason() {
                 </aside>
             </main>
 
-            {/* ✅ Modales tout à la fin */}
             <SessionResultsModal
                 open={sessionModalOpen}
                 onClose={() => setSessionModalOpen(false)}
