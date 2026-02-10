@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useGame } from "../context/GameContext";
-import Header from "../components/Header";
+import Header from "../components/Header.jsx";
 import { apiFetch } from "../services/api";
 import SessionResultsModal from "../components/modals/SessionResultsModal";
 import WdcModal from "../components/modals/WdcModal";

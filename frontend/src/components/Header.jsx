@@ -16,7 +16,7 @@ export default function Header({ userName: userNameProp, userAvatar: userAvatarP
         <header className="flex items-center justify-between p-4 bg-gray-900 text-white shadow-md">
             <div className="flex items-center gap-3">
                 <img
-                    src={new URL("/logo-f1m-2026.png", import.meta.url).toString()}
+                    src={`${import.meta.env.BASE_URL}logo-f1m-2026.png`}
                     alt="F1 Manager 2026"
                     className="h-10 w-10 object-contain"
                 />

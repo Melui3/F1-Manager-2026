@@ -1,5 +1,5 @@
 import React from "react";
-import Header from "../components/Header";
+import Header from "../components/Header.jsx";
 import AvatarPicker from "../components/AvatarPicker";
 import { useGame } from "../context/GameContext";
 import { useNavigate } from "react-router-dom";
