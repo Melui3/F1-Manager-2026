@@ -1,19 +1,10 @@
 // src/services/api.js
 
-// ✅ Mets l'URL Render en prod via .env.production : VITE_API_BASE=https://xxxxx.onrender.com
-// ✅ Mets l'URL locale en dev via .env.development : VITE_API_BASE=http://127.0.0.1:8001
-console.log("VITE_API_BASE =", import.meta.env.VITE_API_BASE);
-console.log("API_BASE =", (import.meta.env.VITE_API_BASE || "").replace(/\/+$/, ""));
-const API_BASE = import.meta.env.DEV
-    ? "http://127.0.0.1:8001"
-    : "https://f1-manager-2026.onrender.com";
+const API_BASE = (import.meta.env.VITE_API_BASE || "").replace(/\/$/, "");
 
-
-// Concat propre : joinUrl("https://x.com", "/api/teams/") => "https://x.com/api/teams/"
 function joinUrl(base, path) {
-    const b = String(base || "").replace(/\/+$/, "");
-    const p = String(path || "").replace(/^\/+/, "");
-    return b ? `${b}/${p}` : `/${p}`; // si base vide, on garde un chemin relatif
+    if (!base) return path; // fallback (dev), but in prod you want VITE_API_BASE set
+    return `${base}${path.startsWith("/") ? "" : "/"}${path}`;
 }
 
 export function getAccessToken() {
@@ -62,7 +53,6 @@ async function refreshAccessToken() {
         return null;
     }
 
-    // simplejwt refresh renvoie { access } (parfois access + refresh selon config)
     setTokens({ access: data?.access, refresh: data?.refresh });
     return data?.access || null;
 }
@@ -72,37 +62,26 @@ export async function apiFetch(path, options = {}) {
 
     const makeHeaders = () => {
         const token = getAccessToken();
-        const headers = {
-            "Content-Type": "application/json",
-            ...(options.headers || {}),
-        };
+        const headers = { ...(options.headers || {}) };
+
+        // JSON header only if not FormData
+        const isFormData = options.body instanceof FormData;
+        if (!isFormData && !headers["Content-Type"]) {
+            headers["Content-Type"] = "application/json";
+        }
+
         if (token) headers.Authorization = `Bearer ${token}`;
         return headers;
     };
 
-    // 1er essai
-    let res = await fetch(url, {
-        ...options,
-        headers: makeHeaders(),
-    });
+    let res = await fetch(url, { ...options, headers: makeHeaders() });
 
-    // si 401 → refresh → retry 1 fois
+    // Refresh on 401
     if (res.status === 401) {
         const newAccess = await refreshAccessToken();
         if (newAccess) {
-            res = await fetch(url, {
-                ...options,
-                headers: makeHeaders(),
-            });
+            res = await fetch(url, { ...options, headers: makeHeaders() });
         }
-    }
-
-    if (res.status === 401) {
-        const body = await safeJson(res);
-        const err = new Error(body?.detail || "Unauthorized");
-        err.status = 401;
-        err.body = body;
-        throw err;
     }
 
     if (!res.ok) {
@@ -133,11 +112,10 @@ export async function login(username, password) {
         throw err;
     }
 
-    // ✅ simplejwt => {access, refresh}
     setTokens({ access: data?.access, refresh: data?.refresh });
     return data;
 }
 
-export async function logout() {
+export function logout() {
     clearTokens();
 }
