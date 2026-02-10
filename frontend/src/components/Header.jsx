@@ -10,16 +10,14 @@ export default function Header({ userName: userNameProp, userAvatar: userAvatarP
 
     const userName = userNameProp ?? userNameCtx ?? "";
     const userAvatar = userAvatarProp ?? userAvatarCtx ?? "/avatars/default.jpg";
-
+    const logoUrl = `${window.location.origin}${import.meta.env.BASE_URL}logo-f1m-2026.png`;
 
     return (
         <header className="flex items-center justify-between p-4 bg-gray-900 text-white shadow-md">
             <div className="flex items-center gap-3">
-                <img
-                    src={`${import.meta.env.BASE_URL}logo-f1m-2026.png`}
-                    alt="F1 Manager 2026"
-                    className="h-10 w-10 object-contain"
-                />
+
+
+                <img src={logoUrl} alt="F1 Manager 2026"/>
                 <h1 className="text-xl font-bold">F1 Manager 2026</h1>
             </div>
 
