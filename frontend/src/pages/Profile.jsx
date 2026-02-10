@@ -1,6 +1,6 @@
 import React from "react";
 import Header from "../components/Header.jsx";
-import AvatarPicker from "../components/AvatarPicker";
+import AvatarPicker from "../components/AvatarPicker.jsx";
 import { useGame } from "../context/GameContext";
 import { useNavigate } from "react-router-dom";
 
@@ -12,7 +12,14 @@ export default function Profile() {
         setUserAvatar(url);
         if (key) setAvatarKey(key);
     }
-    const fallbackAvatar = `${import.meta.env.BASE_URL}avatars/default.jpg`;
+
+    const initials = (userName || "?")
+        .split(" ")
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((w) => w[0]?.toUpperCase())
+        .join("");
+
     return (
         <div className="min-h-screen bg-gray-900 text-white flex flex-col">
             <Header />
@@ -22,12 +29,21 @@ export default function Profile() {
                 <p className="text-gray-300 mb-6">Choisis ton avatar et gère ta session.</p>
 
                 <div className="rounded-2xl border border-gray-700 bg-gray-800/40 p-5 mb-6 flex items-center gap-4">
-                    <img
-                        src={userAvatar || fallbackAvatar}
-                        alt="avatar"
-                        className="h-16 w-16 rounded-full object-cover border border-gray-700"
-                        onError={(e) => (e.currentTarget.src = fallbackAvatar)}
-                    />
+                    {userAvatar ? (
+                        <img
+                            src={userAvatar}
+                            alt="avatar"
+                            className="h-16 w-16 rounded-full object-cover border border-gray-700"
+                            onError={(e) => {
+                                e.currentTarget.style.display = "none";
+                            }}
+                        />
+                    ) : (
+                        <div className="h-16 w-16 rounded-full border border-gray-700 bg-gray-800 flex items-center justify-center text-xl font-black">
+                            {initials || "?"}
+                        </div>
+                    )}
+
                     <div>
                         <div className="text-xl font-bold">{userName}</div>
                         <div className="text-sm text-gray-300">Compte connecté</div>
@@ -36,8 +52,7 @@ export default function Profile() {
 
                 <div className="rounded-2xl border border-gray-700 bg-gray-800/30 p-5">
                     <h2 className="text-lg font-bold mb-4 text-red-400">Changer d’avatar</h2>
-
-                    <AvatarPicker onChanged={(avatarUrl, key) => onChanged(avatarUrl, key)} />
+                    <AvatarPicker onChanged={onChanged} />
                 </div>
 
                 <div className="mt-6 flex gap-3">

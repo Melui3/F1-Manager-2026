@@ -1,5 +1,4 @@
-// src/components/AvatarPicker.jsx
-import React from "react";
+import React, { useMemo, useState } from "react";
 import { apiFetch } from "../services/api";
 
 const AVATARS = [
@@ -9,8 +8,15 @@ const AVATARS = [
 ];
 
 export default function AvatarPicker({ onChanged }) {
-    const base = import.meta.env.BASE_URL; // ex: "/F1-Manager-2026/"
-    const fallback = `${base}avatars/default.jpg`;
+    const base = import.meta.env.BASE_URL; // "/F1-Manager-2026/"
+    const [broken, setBroken] = useState(() => new Set());
+
+    const avatarItems = useMemo(() => {
+        return AVATARS.map((k) => ({
+            key: k,
+            src: `${base}avatars/${k}.jpg`, // ⚠️ si tes fichiers sont .png, change ici.
+        }));
+    }, [base]);
 
     async function choose(key) {
         try {
@@ -20,10 +26,9 @@ export default function AvatarPicker({ onChanged }) {
             });
 
             if (res?.avatar_url) {
-                // Si ton backend renvoie "/avatars/xxx.jpg", on le rend compatible GH Pages
-                const url = res.avatar_url.startsWith("http")
-                    ? res.avatar_url
-                    : `${base}${res.avatar_url.replace(/^\//, "")}`;
+                const url = String(res.avatar_url).startsWith("http")
+                    ? String(res.avatar_url)
+                    : `${base}${String(res.avatar_url).replace(/^\//, "")}`;
 
                 onChanged?.(url, res.avatar_key);
             }
@@ -35,23 +40,37 @@ export default function AvatarPicker({ onChanged }) {
 
     return (
         <div className="grid grid-cols-4 sm:grid-cols-6 gap-3">
-            {AVATARS.map((k) => {
-                const src = `${base}avatars/${k}.jpg`;
+            {avatarItems.map(({ key, src }) => {
+                const isBroken = broken.has(key);
+
                 return (
                     <button
-                        key={k}
+                        key={key}
                         type="button"
-                        onClick={() => choose(k)}
+                        onClick={() => choose(key)}
                         className="rounded-xl border border-gray-700 bg-gray-900/40 hover:bg-gray-800/60 p-2 transition"
-                        title={k}
+                        title={key}
                     >
-                        <img
-                            src={src}
-                            alt={k}
-                            className="w-14 h-14 object-cover rounded-lg mx-auto"
-                            onError={(e) => (e.currentTarget.src = fallback)}
-                        />
-                        <div className="mt-1 text-[11px] text-center text-gray-300">{k}</div>
+                        {isBroken ? (
+                            <div className="w-14 h-14 rounded-lg mx-auto border border-gray-700 bg-gray-800 flex items-center justify-center text-[10px] font-black text-gray-200">
+                                {key.slice(0, 3).toUpperCase()}
+                            </div>
+                        ) : (
+                            <img
+                                src={src}
+                                alt={key}
+                                className="w-14 h-14 object-cover rounded-lg mx-auto"
+                                onError={() => {
+                                    setBroken((prev) => {
+                                        const next = new Set(prev);
+                                        next.add(key);
+                                        return next;
+                                    });
+                                }}
+                            />
+                        )}
+
+                        <div className="mt-1 text-[11px] text-center text-gray-300">{key}</div>
                     </button>
                 );
             })}
