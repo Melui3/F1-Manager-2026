@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useGame } from "../context/GameContext";
 import Header from "../components/Header.jsx";
@@ -37,9 +37,9 @@ const TEAM_STYLE = {
 
 const norm = (s) => String(s ?? "").trim().toLowerCase();
 
-// === images backend: public/drivers/surname_lower_number.avif
+// === images frontend: public/drivers/surname_lower_number.avif
 function driverImgSrc(d) {
-    const base = import.meta.env.BASE_URL
+    const base = import.meta.env.BASE_URL || "/";
     const surname = d?.surname ?? "";
     const number = d?.number ?? "";
     if (!surname || number === "") return null;
@@ -47,7 +47,7 @@ function driverImgSrc(d) {
 }
 
 function teamLogoSrc(teamName) {
-    const base = import.meta.env.BASE_URL
+    const base = import.meta.env.BASE_URL || "/";
     const key = TEAM_KEY_MAP[teamName];
     return key ? `${base}teams/${key}.avif` : null;
 }
@@ -106,14 +106,10 @@ function StatCell({ label, value, delta }) {
 }
 
 function StatsGrid({ stats, prevStats }) {
-    if (!stats) {
-        return <div className="text-sm text-gray-300">Stats indisponibles.</div>;
-    }
+    if (!stats) return <div className="text-sm text-gray-300">Stats indisponibles.</div>;
 
     const delta = (k) =>
-        typeof stats?.[k] === "number" && typeof prevStats?.[k] === "number"
-            ? stats[k] - prevStats[k]
-            : null;
+        typeof stats?.[k] === "number" && typeof prevStats?.[k] === "number" ? stats[k] - prevStats[k] : null;
 
     return (
         <div className="grid grid-cols-3 gap-2">
@@ -133,6 +129,7 @@ function StatsGrid({ stats, prevStats }) {
 export default function StartSeason() {
     const { userName, team, driver, setTeam, setDriver } = useGame();
     const navigate = useNavigate();
+
     const [expandedGp, setExpandedGp] = useState(null);
 
     const [calendar, setCalendar] = useState([]);
@@ -148,12 +145,16 @@ export default function StartSeason() {
     const [wdcModalOpen, setWdcModalOpen] = useState(false);
     const [wdcShown, setWdcShown] = useState(false);
 
-    const [prevPlayerStats, setPrevPlayerStats] = useState(null); // snapshot avant simu
-    const [playerStats, setPlayerStats] = useState(null); // snapshot après refresh
+    const [prevPlayerStats, setPrevPlayerStats] = useState(null);
+    const [playerStats, setPlayerStats] = useState(null);
     const [lastSessionMeta, setLastSessionMeta] = useState(null);
 
-    // debug tick (si tu veux forcer un refresh UI à certains endroits)
     const [resultsTick, setResultsTick] = useState(0);
+
+    // === SIMULER TOUT ===
+    const [simAllLoading, setSimAllLoading] = useState(false);
+    const [simAllProgress, setSimAllProgress] = useState({ done: 0, total: 0 });
+    const simAllAbortRef = useRef(false);
 
     if (!team || !driver) {
         return (
@@ -258,10 +259,9 @@ export default function StartSeason() {
         return Array.isArray(calendar) && calendar.length > 0 && calendar.every((s) => !!s.is_simulated);
     }, [calendar]);
 
-    // simulate 1 session
+    // ===== Simulate 1 session (avec modal)
     const simulateOne = async (sessionIndex, force = false, metaOverride = null) => {
         try {
-            // snapshot AVANT la session (pour delta)
             if (playerStats) setPrevPlayerStats(playerStats);
 
             setSimLoading(true);
@@ -271,18 +271,14 @@ export default function StartSeason() {
             setLastSessionMeta(meta);
 
             const url = force ? `/api/simulate/session/${sessionIndex}/?force=1` : `/api/simulate/session/${sessionIndex}/`;
-
-            console.log("[SIM] POST", url);
             const res = await apiFetch(url, { method: "POST", body: JSON.stringify({}) });
 
             const results = Array.isArray(res?.results) ? res.results : [];
             setLastResults(results);
             setResultsTick((t) => t + 1);
 
-            // refresh board + calendar (donc stats up-to-date)
             await refreshAll();
 
-            // ouvre la modal
             setSessionModalOpen(true);
         } catch (e) {
             console.error(e);
@@ -292,10 +288,60 @@ export default function StartSeason() {
         }
     };
 
-    // simulate next (front)
+    // ===== Simulate 1 session (silencieux, pas de modal)
+    const simulateOneSilent = async (sessionIndex, force = false, metaOverride = null) => {
+        const meta = metaOverride || flatSessions.find((s) => s?.index === sessionIndex) || null;
+        setLastSessionMeta(meta);
+
+        const url = force ? `/api/simulate/session/${sessionIndex}/?force=1` : `/api/simulate/session/${sessionIndex}/`;
+        const res = await apiFetch(url, { method: "POST", body: JSON.stringify({}) });
+
+        const results = Array.isArray(res?.results) ? res.results : [];
+        setLastResults(results);
+        setResultsTick((t) => t + 1);
+
+        await refreshAll();
+    };
+
+    // ===== Simulate next
     const simulateNext = async (force = false) => {
         if (!nextSession) return;
         await simulateOne(nextSession.index, force, nextSession);
+    };
+
+    // ===== Simulate ALL remaining sessions
+    const simulateAll = async (force = false) => {
+        const remaining = flatSessions.filter((s) => !s?.is_simulated);
+        if (!remaining.length) return;
+
+        try {
+            if (playerStats) setPrevPlayerStats(playerStats);
+
+            simAllAbortRef.current = false;
+            setSimAllLoading(true);
+            setError(null);
+            setSimAllProgress({ done: 0, total: remaining.length });
+
+            // Option: fermer la modal pendant la série
+            setSessionModalOpen(false);
+
+            for (let i = 0; i < remaining.length; i++) {
+                if (simAllAbortRef.current) break;
+
+                const s = remaining[i];
+                await simulateOneSilent(s.index, force, s);
+
+                setSimAllProgress({ done: i + 1, total: remaining.length });
+            }
+
+            // Ouvre la modal seulement à la fin (ou au stop: dernière session effectuée)
+            setSessionModalOpen(true);
+        } catch (e) {
+            console.error(e);
+            setError(e?.message || "Erreur simulation totale");
+        } finally {
+            setSimAllLoading(false);
+        }
     };
 
     const resetSeason = async () => {
@@ -303,10 +349,8 @@ export default function StartSeason() {
             setSimLoading(true);
             setError(null);
 
-            console.log("[RESET] POST /api/season/reset/");
             await apiFetch("/api/season/reset/", { method: "POST", body: JSON.stringify({}) });
 
-            // ✅ reset FRONT total
             setCalendar([]);
             setDriversBoard([]);
             setLastResults([]);
@@ -331,7 +375,7 @@ export default function StartSeason() {
         }
     };
 
-    // (optionnel) si tu veux afficher la WDC quand saison finie
+    // afficher WDC quand saison finie
     useEffect(() => {
         if (seasonDone && !wdcShown) {
             setWdcShown(true);
@@ -352,10 +396,10 @@ export default function StartSeason() {
                             <p className="text-sm text-gray-300 mt-1">Clique un GP pour dérouler les sessions et simuler.</p>
                         </div>
 
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2">
                             <button
                                 onClick={() => simulateNext(false)}
-                                disabled={simLoading || !nextSession}
+                                disabled={simLoading || simAllLoading || !nextSession}
                                 className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-xl font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 {simLoading ? "Simulation..." : "Simuler next"}
@@ -363,18 +407,45 @@ export default function StartSeason() {
 
                             <button
                                 onClick={() => simulateNext(true)}
-                                disabled={simLoading || !nextSession}
+                                disabled={simLoading || simAllLoading || !nextSession}
                                 className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-xl font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 Force next
                             </button>
+
+                            <button
+                                onClick={() => simulateAll(false)}
+                                disabled={simLoading || simAllLoading || !nextSession}
+                                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-xl font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {simAllLoading ? `Saison... (${simAllProgress.done}/${simAllProgress.total})` : "Simuler tout"}
+                            </button>
+
+                            <button
+                                onClick={() => simulateAll(true)}
+                                disabled={simLoading || simAllLoading || !nextSession}
+                                className="px-4 py-2 bg-emerald-800 hover:bg-emerald-900 rounded-xl font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                Force tout
+                            </button>
+
+                            {simAllLoading && (
+                                <button
+                                    onClick={() => {
+                                        simAllAbortRef.current = true;
+                                    }}
+                                    className="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-xl font-semibold transition border border-gray-700"
+                                >
+                                    Stop
+                                </button>
+                            )}
                         </div>
                     </div>
 
                     {nextSession && (
                         <div className="text-xs text-gray-400">
-                            Prochaine session : <b className="text-gray-200">{nextSession.gp_name}</b> • {nextSession.session_type} •
-                            index {nextSession.index}
+                            Prochaine session : <b className="text-gray-200">{nextSession.gp_name}</b> • {nextSession.session_type} • index{" "}
+                            {nextSession.index}
                         </div>
                     )}
 
@@ -439,14 +510,14 @@ export default function StartSeason() {
                                                         <div className="flex gap-2">
                                                             <button
                                                                 onClick={() => simulateOne(s.index, false, s)}
-                                                                disabled={simLoading}
+                                                                disabled={simLoading || simAllLoading}
                                                                 className="px-3 py-1.5 bg-red-600 hover:bg-red-700 rounded-lg font-semibold transition disabled:opacity-50"
                                                             >
                                                                 Simuler
                                                             </button>
                                                             <button
                                                                 onClick={() => simulateOne(s.index, true, s)}
-                                                                disabled={simLoading}
+                                                                disabled={simLoading || simAllLoading}
                                                                 className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold transition disabled:opacity-50"
                                                             >
                                                                 Force
@@ -467,7 +538,6 @@ export default function StartSeason() {
                         <div className="mt-2 bg-gray-800 border border-gray-700 rounded-2xl p-4">
                             <h2 className="font-bold text-lg text-red-400 mb-2">Dernière session</h2>
 
-                            {/* Stats dans le "cas 2" (hors modal) */}
                             <div className="mb-3 rounded-xl bg-gray-900/50 border border-gray-700 p-3">
                                 <div className="text-xs text-gray-400 mb-2">Stats pilote</div>
                                 <StatsGrid stats={playerStats} prevStats={prevPlayerStats} />
@@ -507,16 +577,16 @@ export default function StartSeason() {
                     <div className={`bg-gray-800 border-2 rounded-2xl p-4 shadow-lg flex flex-col items-center gap-2 ${teamBorder}`}>
                         <button
                             onClick={() => {
-                                // Optionnel: tu peux aussi reset la saison côté backend
-                                // await resetSeason();  (mais là on fait simple)
                                 setDriver(null);
                                 setTeam(null);
                                 navigate("/choose-team");
                             }}
-                            className="w-full px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-xl font-semibold transition border border-gray-700"
+                            disabled={simLoading || simAllLoading}
+                            className="w-full px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-xl font-semibold transition border border-gray-700 disabled:opacity-50"
                         >
                             Refaire les choix
                         </button>
+
                         <img
                             src={driverImgSrc(driver)}
                             alt={`${driver.name} ${driver.surname}`}
@@ -546,7 +616,6 @@ export default function StartSeason() {
                             <div className="text-2xl font-black text-white">{playerPoints}</div>
                         </div>
 
-                        {/* Stats dans le "cas 1" (sidebar) */}
                         <div className="mt-3 w-full rounded-xl bg-gray-900/50 border border-gray-700 p-3">
                             <div className="text-xs text-gray-400 mb-2">Stats pilote</div>
                             <StatsGrid stats={playerStats} prevStats={prevPlayerStats} />
@@ -554,7 +623,7 @@ export default function StartSeason() {
 
                         <button
                             onClick={resetSeason}
-                            disabled={simLoading}
+                            disabled={simLoading || simAllLoading}
                             className="mt-3 w-full px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-xl font-semibold transition disabled:opacity-50"
                         >
                             Reset saison
@@ -585,9 +654,7 @@ export default function StartSeason() {
                                     return (
                                         <div
                                             key={`${d.surname}_${d.number}`}
-                                            className={`flex justify-between p-2 rounded-xl ${
-                                                isPlayer ? "bg-gray-700 font-semibold" : "bg-gray-900/30"
-                                            }`}
+                                            className={`flex justify-between p-2 rounded-xl ${isPlayer ? "bg-gray-700 font-semibold" : "bg-gray-900/30"}`}
                                         >
                       <span className="text-sm">
                         {idx + 1}. {d.name} {d.surname} <span className="text-gray-400">({d.team})</span>
@@ -602,7 +669,7 @@ export default function StartSeason() {
                 </aside>
             </main>
 
-            {/* ✅ Modales TOUT À LA FIN */}
+            {/* ✅ Modales tout à la fin */}
             <SessionResultsModal
                 open={sessionModalOpen}
                 onClose={() => setSessionModalOpen(false)}
