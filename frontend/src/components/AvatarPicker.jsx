@@ -33,10 +33,11 @@ export default function AvatarPicker({ onChanged }) {
             });
 
             // Attendu: { avatar_key, avatar_url } (ou au moins avatar_key)
-            applyAvatar({
-                avatar_key: res?.avatar_key || key,
-                avatar_url: res?.avatar_url || null,
-            });
+            if (typeof applyAvatar === "function") {
+                applyAvatar({ avatar_key: res?.avatar_key || key, avatar_url: res?.avatar_url || null });
+            } else {
+                console.warn("applyAvatar missing in GameContext");
+            }
 
             // compat avec ton code existant
             if (onChanged) {
