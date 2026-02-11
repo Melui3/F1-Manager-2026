@@ -32,40 +32,34 @@ def drivers_list(request):
             "name": d.name,
             "surname": d.surname,
 
-            # team infos
             "team": d.team.name if d.team_id else None,
             "team_id": d.team_id,
             "team_logo_url": getattr(d.team, "logo_url", None) if d.team_id else None,
 
-            # media
             "image_url": getattr(d, "image_url", None),
             "image_key": getattr(d, "image_key", None),
 
-            # identity
             "country": getattr(d, "country", None),
             "number": getattr(d, "number", None),
 
-            # progression
             "points": getattr(d, "points", 0),
             "wins": getattr(d, "wins", 0),
             "podiums": getattr(d, "podiums", 0),
             "pole_positions": getattr(d, "pole_positions", 0),
             "fastest_laps": getattr(d, "fastest_laps", 0),
 
-            # core stats
             "speed": getattr(d, "speed", None),
             "racing": getattr(d, "racing", None),
             "reaction": getattr(d, "reaction", None),
             "experience": getattr(d, "experience", None),
 
-            # ✅ champs manquants (safe)
             "consistency": getattr(d, "consistency", None),
             "error_rate": getattr(d, "error_rate", None),
 
-            # ✅ affinities (safe + tes noms front)
-            "street_circuit_affinity": getattr(d, "street_affinity", getattr(d, "street_circuit_affinity", None)),
-            "high_speed_circuit_affinity": getattr(d, "high_speed_affinity", getattr(d, "high_speed_circuit_affinity", None)),
-            "wet_circuit_affinity": getattr(d, "wet_affinity", getattr(d, "wet_circuit_affinity", None)),
+            # ✅ ces 3 noms EXACTS sont ceux que ton front lit
+            "street_circuit_affinity": getattr(d, "street_affinity", getattr(d, "street_circuit_affinity", 0)),
+            "high_speed_circuit_affinity": getattr(d, "high_speed_affinity", getattr(d, "high_speed_circuit_affinity", 0)),
+            "wet_circuit_affinity": getattr(d, "wet_affinity", getattr(d, "wet_circuit_affinity", 0)),
         }
         for d in qs
     ])
@@ -102,5 +96,4 @@ def simulate_next_view(request):
 
 @api_view(["POST"])
 def season_reset_view(request):
-    # tu peux laisser reset_season() par défaut (reset_skills=True dans ton service)
     return Response(reset_season())

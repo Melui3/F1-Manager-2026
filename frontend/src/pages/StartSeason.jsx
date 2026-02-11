@@ -35,8 +35,6 @@ const TEAM_STYLE = {
     "Visa Cash App Racing Bulls F1 Team": "border-indigo-400/60 shadow-indigo-400/20",
 };
 
-const norm = (s) => String(s ?? "").trim().toLowerCase();
-
 // ✅ robust helpers (accents, tirets, num string/number)
 const clean = (s) =>
     String(s ?? "")
@@ -155,11 +153,6 @@ export default function StartSeason() {
     const [calendar, setCalendar] = useState([]);
     const [driversBoard, setDriversBoard] = useState([]);
 
-    useEffect(() => {
-        window.__driversBoard = driversBoard;
-        console.log("[driversBoard.length]", Array.isArray(driversBoard) ? driversBoard.length : "not array");
-    }, [driversBoard]);
-
     const [loading, setLoading] = useState(true);
     const [simLoading, setSimLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -172,7 +165,7 @@ export default function StartSeason() {
 
     const [resultsTick, setResultsTick] = useState(0);
 
-    // ✅ UN SEUL MODAL MANAGER : impossible d’en ouvrir 2
+    // ✅ UN SEUL MODAL MANAGER
     const [activeModal, setActiveModal] = useState(null); // null | "session" | "wdc"
     const [wdcShown, setWdcShown] = useState(false);
 
@@ -227,7 +220,7 @@ export default function StartSeason() {
     }
 
     useEffect(() => {
-        async function load() {
+        (async () => {
             try {
                 setError(null);
                 setLoading(true);
@@ -238,43 +231,54 @@ export default function StartSeason() {
             } finally {
                 setLoading(false);
             }
-        }
-        load();
+        })();
     }, []);
 
-    const toggleGp = (gpName) => setExpandedGp((cur) => (cur === gpName ? null : gpName));
-
-    // ✅ points joueur depuis leaderboard (matching robuste)
+    // ✅ logs propres (pas de spam)
     const playerRow = useMemo(() => driversBoard.find((d) => isSameDriver(d, driver)) || null, [driversBoard, driver]);
+
+    useEffect(() => {
+        if (!playerRow) return;
+        console.log("[playerRow]", playerRow);
+    }, [playerRow]);
+
+    useEffect(() => {
+        if (!lastResults?.length) return;
+        console.log("[lastResults[0]]", lastResults[0]);
+    }, [lastResults]);
 
     const playerPoints = playerRow?.points ?? 0;
 
-    // ✅ résultat joueur dans lastResults (matching robuste)
-    const playerLast = useMemo(() => lastResults.find((r) => isSameDriver(r, driver)) || null, [lastResults, driver, resultsTick]);
+    const playerLast = useMemo(
+        () => lastResults.find((r) => isSameDriver(r, driver)) || null,
+        [lastResults, driver, resultsTick]
+    );
 
-    // set playerStats depuis board (après refresh)
     useEffect(() => {
-        if (playerRow) {
-            setPlayerStats({
-                speed: playerRow.speed,
-                racing: playerRow.racing,
-                reaction: playerRow.reaction,
-                experience: playerRow.experience,
-                consistency: playerRow.consistency,
-                error_rate: playerRow.error_rate,
-                street: playerRow.street_circuit_affinity,
-                high: playerRow.high_speed_circuit_affinity,
-                wet: playerRow.wet_circuit_affinity,
-                points: playerRow.points,
-            });
-        }
+        if (!playerRow) return;
+        setPlayerStats({
+            speed: playerRow.speed,
+            racing: playerRow.racing,
+            reaction: playerRow.reaction,
+            experience: playerRow.experience,
+            consistency: playerRow.consistency,
+            error_rate: playerRow.error_rate,
+            street: playerRow.street_circuit_affinity,
+            high: playerRow.high_speed_circuit_affinity,
+            wet: playerRow.wet_circuit_affinity,
+            points: playerRow.points,
+        });
     }, [playerRow]);
 
     const teamBorder = TEAM_STYLE[team.name] || "border-gray-700 shadow-black/0";
 
-    const seasonDone = useMemo(() => Array.isArray(calendar) && calendar.length > 0 && calendar.every((s) => !!s.is_simulated), [calendar]);
+    const seasonDone = useMemo(
+        () => Array.isArray(calendar) && calendar.length > 0 && calendar.every((s) => !!s.is_simulated),
+        [calendar]
+    );
 
-    // ===== Simulate 1 session (avec modal)
+    const toggleGp = (gpName) => setExpandedGp((cur) => (cur === gpName ? null : gpName));
+
     const simulateOne = async (sessionIndex, force = false, metaOverride = null) => {
         try {
             if (playerStats) setPrevPlayerStats(playerStats);
@@ -294,7 +298,6 @@ export default function StartSeason() {
 
             await refreshAll();
 
-            // ✅ ouvre UNIQUEMENT la modal session
             setActiveModal("session");
         } catch (e) {
             console.error(e);
@@ -304,7 +307,6 @@ export default function StartSeason() {
         }
     };
 
-    // ===== Simulate 1 session (silencieux, pas de modal)
     const simulateOneSilent = async (sessionIndex, force = false, metaOverride = null) => {
         const meta = metaOverride || flatSessions.find((s) => s?.index === sessionIndex) || null;
         setLastSessionMeta(meta);
@@ -319,13 +321,11 @@ export default function StartSeason() {
         await refreshAll();
     };
 
-    // ===== Simulate next
     const simulateNext = async (force = false) => {
         if (!nextSession) return;
         await simulateOne(nextSession.index, force, nextSession);
     };
 
-    // ===== Simulate ALL remaining sessions
     const simulateAll = async (force = false) => {
         const remaining = flatSessions.filter((s) => !s?.is_simulated);
         if (!remaining.length) return;
@@ -336,12 +336,10 @@ export default function StartSeason() {
             setError(null);
             setSimAllProgress({ done: 0, total: remaining.length });
 
-            // ✅ ferme toute modal pendant la simu totale
             setActiveModal(null);
 
             for (let i = 0; i < remaining.length; i++) {
                 if (simAllAbortRef.current) break;
-
                 if (playerStats) setPrevPlayerStats(playerStats);
 
                 const s = remaining[i];
@@ -349,7 +347,6 @@ export default function StartSeason() {
                 setSimAllProgress({ done: i + 1, total: remaining.length });
             }
 
-            // ✅ à la fin : ouvre la modal session (dernière session)
             setActiveModal("session");
         } catch (e) {
             console.error(e);
@@ -389,26 +386,39 @@ export default function StartSeason() {
         }
     };
 
-    // ✅ afficher WDC quand saison finie, MAIS jamais si une autre modal est ouverte
+    // ✅ Auto-open WDC fin de saison (mais seulement si driversBoard rempli)
     useEffect(() => {
         if (!seasonDone) return;
         if (wdcShown) return;
-
-        // ✅ si une modal est déjà ouverte, on n'ouvre pas la WDC
         if (activeModal !== null) return;
 
-        const openWdc = async () => {
-            // ✅ si board vide, on recharge avant d’ouvrir
+        (async () => {
+            try {
+                // si board vide, recharge
+                if (!Array.isArray(driversBoard) || driversBoard.length === 0) {
+                    await refreshAll();
+                }
+                setWdcShown(true);
+                setActiveModal("wdc");
+            } catch (e) {
+                console.error(e);
+            }
+        })();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [seasonDone, wdcShown, activeModal]);
+
+    // ✅ Ouvrir WDC manuellement = garantit board non vide
+    const openWdc = async () => {
+        try {
             if (!Array.isArray(driversBoard) || driversBoard.length === 0) {
                 await refreshAll();
             }
-            setWdcShown(true);
             setActiveModal("wdc");
-        };
-
-        openWdc();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [seasonDone, wdcShown, activeModal]);
+        } catch (e) {
+            console.error(e);
+            setError(e?.message || "Erreur WDC");
+        }
+    };
 
     return (
         <div className="min-h-screen bg-gray-900 flex flex-col text-white">
@@ -471,8 +481,8 @@ export default function StartSeason() {
 
                     {nextSession && (
                         <div className="text-xs text-gray-400">
-                            Prochaine session : <b className="text-gray-200">{nextSession.gp_name}</b> • {nextSession.session_type} • index{" "}
-                            {nextSession.index}
+                            Prochaine session : <b className="text-gray-200">{nextSession.gp_name}</b> • {nextSession.session_type} •
+                            index {nextSession.index}
                         </div>
                     )}
 
@@ -560,7 +570,6 @@ export default function StartSeason() {
                         </div>
                     )}
 
-                    {/* Last results */}
                     {lastResults.length > 0 && (
                         <div className="mt-2 bg-gray-800 border border-gray-700 rounded-2xl p-4">
                             <h2 className="font-bold text-lg text-red-400 mb-2">Dernière session</h2>
@@ -660,7 +669,7 @@ export default function StartSeason() {
                         <div className="flex items-center justify-between mb-3">
                             <h2 className="font-bold text-lg text-red-500">Leaderboard</h2>
                             <button
-                                onClick={() => setActiveModal("wdc")}
+                                onClick={openWdc}
                                 className="text-xs px-3 py-1 rounded-lg bg-gray-700 hover:bg-gray-600 font-semibold"
                             >
                                 WDC
@@ -705,12 +714,7 @@ export default function StartSeason() {
                 prevPlayerStats={prevPlayerStats}
             />
 
-            <WdcModal
-                open={activeModal === "wdc"}
-                onClose={() => setActiveModal(null)}
-                board={driversBoard}
-                player={driver}
-            />
+            <WdcModal open={activeModal === "wdc"} onClose={() => setActiveModal(null)} board={driversBoard} player={driver} />
         </div>
     );
 }

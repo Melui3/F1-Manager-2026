@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo } from "react";
 import Modal from "./Modal";
 
 // helpers robustes (même logique que StartSeason)
@@ -24,22 +24,25 @@ const isSameDriver = (a, b) => {
 };
 
 export default function WdcModal({ open, onClose, board, player }) {
-    console.log("WDC open:", open);
-    console.log("WDC board:", board);
-    console.log("WDC board length:", Array.isArray(board) ? board.length : "not array");
-
-    if (!open) return null;
-
     const safeBoard = Array.isArray(board) ? board : [];
+
+    // ✅ logs propres : seulement quand la modale s’ouvre / board change
+    useEffect(() => {
+        if (!open) return;
+        console.log("[WDC] open:", open);
+        console.log("[WDC] board length:", safeBoard.length);
+        console.log("[WDC] sample:", safeBoard.slice(0, 3));
+    }, [open, safeBoard.length]); // length suffit, évite spam
 
     const sorted = useMemo(() => {
         const arr = [...safeBoard];
         arr.sort((a, b) => {
             const pa = Number(a?.points ?? 0);
             const pb = Number(b?.points ?? 0);
-            // tie-break: wins puis podiums (si dispo)
+
             const wa = Number(a?.wins ?? 0);
             const wb = Number(b?.wins ?? 0);
+
             const pda = Number(a?.podiums ?? 0);
             const pdb = Number(b?.podiums ?? 0);
 
@@ -52,8 +55,7 @@ export default function WdcModal({ open, onClose, board, player }) {
 
     const champion = sorted[0] || null;
 
-    // Debug utile (tu peux enlever après)
-   console.log("[WDC] open", open, "boardLen", safeBoard.length, "sortedLen", sorted.length);
+    if (!open) return null;
 
     return (
         <Modal
@@ -72,12 +74,13 @@ export default function WdcModal({ open, onClose, board, player }) {
                 </div>
             }
         >
-            {/* Si le board est vide, on l’affiche clairement (pas une modale vide) */}
             {sorted.length === 0 ? (
                 <div className="text-gray-200">
                     <div className="font-bold mb-1">Aucun classement reçu.</div>
                     <div className="text-sm text-gray-400">
-                        Vérifie que <code className="text-gray-300">driversBoard</code> est bien rempli avant d’ouvrir la modale.
+                        Le front n’a pas reçu <code className="text-gray-300">/api/drivers/</code> au moment où la modale s’ouvre.
+                        <br />
+                        (Donc: problème de fetch, token, ou CORS.)
                     </div>
                 </div>
             ) : (
@@ -90,9 +93,7 @@ export default function WdcModal({ open, onClose, board, player }) {
                                 {champion?.name} {champion?.surname}{" "}
                                 <span className="text-gray-400 font-semibold">({champion?.team})</span>
                             </div>
-                            <div className="text-white font-black">
-                                {Number(champion?.points ?? 0)} pts
-                            </div>
+                            <div className="text-white font-black">{Number(champion?.points ?? 0)} pts</div>
                         </div>
                     </div>
 
@@ -109,18 +110,16 @@ export default function WdcModal({ open, onClose, board, player }) {
                                     <div
                                         key={`${d?.surname ?? "x"}_${d?.number ?? idx}_${rank}`}
                                         className={`flex items-center justify-between rounded-xl border px-3 py-2 ${
-                                            isPlayer
-                                                ? "border-amber-400/40 bg-amber-500/10"
-                                                : "border-gray-800 bg-gray-900/40"
+                                            isPlayer ? "border-amber-400/40 bg-amber-500/10" : "border-gray-800 bg-gray-900/40"
                                         }`}
                                     >
                                         <div className="text-sm text-gray-200">
                                             <span className="font-bold">{rank}.</span>{" "}
-                                            <span className="font-semibold">{d?.name} {d?.surname}</span>{" "}
+                                            <span className="font-semibold">
+                        {d?.name} {d?.surname}
+                      </span>{" "}
                                             <span className="text-gray-500">({d?.team})</span>
-                                            {d?.number != null && (
-                                                <span className="text-gray-500"> • #{d.number}</span>
-                                            )}
+                                            {d?.number != null && <span className="text-gray-500"> • #{d.number}</span>}
                                         </div>
 
                                         <div className="text-sm text-gray-200 font-semibold whitespace-nowrap">
@@ -132,10 +131,7 @@ export default function WdcModal({ open, onClose, board, player }) {
                         </div>
                     </div>
 
-                    {/* Note */}
-                    <div className="text-xs text-gray-500">
-                        Tie-break: points → wins → podiums.
-                    </div>
+                    <div className="text-xs text-gray-500">Tie-break: points → wins → podiums.</div>
                 </div>
             )}
         </Modal>
