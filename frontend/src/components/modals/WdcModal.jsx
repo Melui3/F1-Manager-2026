@@ -24,6 +24,12 @@ const isSameDriver = (a, b) => {
 };
 
 export default function WdcModal({ open, onClose, board, player }) {
+    console.log("WDC open:", open);
+    console.log("WDC board:", board);
+    console.log("WDC board length:", Array.isArray(board) ? board.length : "not array");
+
+    if (!open) return null;
+
     const safeBoard = Array.isArray(board) ? board : [];
 
     const sorted = useMemo(() => {
