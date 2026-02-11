@@ -2,11 +2,11 @@ import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 
 import LoginScreen from "./pages/LoginScreen.jsx";
-import RegisterScreen from "./pages/RegisterScreen";
-import ChooseTeam from "./pages/ChooseTeam";
-import ChooseDriver from "./pages/ChooseDriver";
-import StartSeason from "./pages/StartSeason";
-import Profile from "./pages/Profile";
+import RegisterScreen from "./pages/RegisterScreen.jsx";
+import ChooseTeam from "./pages/ChooseTeam.jsx";
+import ChooseDriver from "./pages/ChooseDriver.jsx";
+import StartSeason from "./pages/StartSeason.jsx";
+import Profile from "./pages/Profile.jsx";
 
 import { useGame } from "./context/GameContext";
 
