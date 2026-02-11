@@ -690,8 +690,8 @@ export default function StartSeason() {
             />
 
             <WdcModal
-                open={activeModal === "wdc"}
-                onClose={() => setActiveModal(null)}
+                open={wdcModalOpen}
+                onClose={() => setWdcModalOpen(false)}
                 board={driversBoard}
                 player={driver}
             />
