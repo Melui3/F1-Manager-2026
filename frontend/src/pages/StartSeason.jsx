@@ -25,7 +25,7 @@ const TEAM_STYLE = {
     "Oracle Red Bull Racing": "border-blue-500/60 shadow-blue-500/20",
     "Scuderia Ferrari HP": "border-red-500/70 shadow-red-500/20",
     "Mercedes-AMG Petronas Formula One Team": "border-emerald-400/60 shadow-emerald-400/20",
-    "McLaren Mastercard Formula 1 Team": "border-orange-400/70 shadow-orange-400/20",
+    "McLaren Mastercard Formula 1 Team": "border-orange-400/70 shadow-orange-500/10",
     "Aston Martin Aramco Formula One Team": "border-emerald-500/60 shadow-emerald-500/20",
     "BWT Alpine F1 Team": "border-sky-400/60 shadow-sky-400/20",
     "Audi F1 Team (Revolut)": "border-zinc-200/40 shadow-zinc-200/10",
@@ -109,9 +109,9 @@ function StatCell({ label, value, delta }) {
     const deltaTxt = d === null ? null : d > 0 ? `+${d}` : `${d}`;
 
     return (
-        <div className="rounded-xl border border-gray-700 bg-gray-900/30 p-2">
+        <div className="rounded-xl border border-gray-700 bg-gray-900/30 p-3">
             <div className="text-[11px] text-gray-400">{label}</div>
-            <div className="flex items-baseline justify-between gap-2">
+            <div className="flex items-baseline justify-between gap-3 mt-0.5">
                 <div className="text-sm font-extrabold text-white">{value ?? "—"}</div>
                 {deltaTxt !== null && deltaTxt !== "0" && (
                     <div className={`text-xs font-bold ${d > 0 ? "text-green-400" : "text-red-400"}`}>{deltaTxt}</div>
@@ -128,7 +128,7 @@ function StatsGrid({ stats, prevStats }) {
         typeof stats?.[k] === "number" && typeof prevStats?.[k] === "number" ? stats[k] - prevStats[k] : null;
 
     return (
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-3 gap-3">
             <StatCell label="Speed" value={stats.speed} delta={delta("speed")} />
             <StatCell label="Racing" value={stats.racing} delta={delta("racing")} />
             <StatCell label="Reaction" value={stats.reaction} delta={delta("reaction")} />
@@ -235,7 +235,6 @@ export default function StartSeason() {
         })();
     }, []);
 
-    // points joueur depuis leaderboard
     const playerRow = useMemo(() => driversBoard.find((d) => isSameDriver(d, driver)) || null, [driversBoard, driver]);
     const playerPoints = playerRow?.points ?? 0;
 
@@ -269,7 +268,6 @@ export default function StartSeason() {
 
     const toggleGp = (gpName) => setExpandedGp((cur) => (cur === gpName ? null : gpName));
 
-    // ✅ Open WDC (fetch dedicated board NOW)
     const openWdc = async () => {
         try {
             setWdcError(null);
@@ -290,7 +288,6 @@ export default function StartSeason() {
         }
     };
 
-    // ===== Simulate 1 session (avec modal)
     const simulateOne = async (sessionIndex, force = false, metaOverride = null) => {
         try {
             if (playerStats) setPrevPlayerStats(playerStats);
@@ -398,7 +395,6 @@ export default function StartSeason() {
         }
     };
 
-    // ✅ Auto WDC end season (fetch WDC board, not driversBoard)
     useEffect(() => {
         if (!seasonDone) return;
         if (wdcShown) return;
@@ -415,95 +411,107 @@ export default function StartSeason() {
         <div className="min-h-screen bg-gray-900 flex flex-col text-white">
             <Header userName={userName} />
 
-            <main className="flex-1 p-6 flex flex-col lg:flex-row gap-6">
+            <main className="flex-1 p-4 md:p-6 lg:p-8 flex flex-col lg:flex-row gap-6 lg:gap-8">
                 {/* LEFT */}
-                <section className="flex-1 flex flex-col gap-4">
-                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                        <div>
-                            <h1 className="text-4xl font-extrabold">Calendrier 2026</h1>
-                            <div className="rounded-2xl border border-gray-700 bg-gray-800/60 p-4">
-                                <h2 className="text-lg font-extrabold text-white mb-2">Comment ça marche ?</h2>
-                                <ul className="text-sm text-gray-200 space-y-1">
-                                    <li>• Clique un <b>GP</b> pour afficher ses sessions (Practice / Qualif / Race).</li>
-                                    <li>• <b>Simuler</b> lance la session et ouvre la modale de résultats.</li>
-                                    <li>• <b>Simuler next</b> lance la prochaine session non simulée.</li>
-                                    <li>• <b>Simuler tout</b> enchaîne toutes les sessions restantes.</li>
-                                    <li>• Après chaque session : points + progression stats, et le <b>Leaderboard</b> se met à jour.</li>
-                                    <li>• <b>Force</b> resimule une session même si déjà simulée (pratique pour tester).</li>
-                                    <li>• Fin de saison : <b>WDC</b> affiche le classement final.</li>
-                                </ul>
+                <section className="flex-1 flex flex-col gap-6">
+                    {/* Title + How-to + Buttons */}
+                    <div className="rounded-2xl border border-gray-700 bg-gray-800/30 p-5 md:p-6">
+                        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-5">
+                            <div className="flex-1">
+                                <h1 className="text-3xl md:text-4xl font-extrabold">Calendrier 2026</h1>
+
+                                <div className="mt-4 rounded-2xl border border-gray-700 bg-gray-900/30 p-4">
+                                    <h2 className="text-base font-extrabold text-white mb-2">Comment ça marche ?</h2>
+                                    <ul className="text-sm text-gray-200 space-y-1.5 leading-relaxed">
+                                        <li>• Clique un <b>GP</b> pour afficher ses sessions (Practice / Qualif / Race).</li>
+                                        <li>• <b>Simuler</b> lance la session et ouvre la modale de résultats.</li>
+                                        <li>• <b>Simuler next</b> lance la prochaine session non simulée.</li>
+                                        <li>• <b>Simuler tout</b> enchaîne toutes les sessions restantes.</li>
+                                        <li>• Après chaque session : points + progression stats, et le <b>Leaderboard</b> se met à jour.</li>
+                                        <li>• <b>Force</b> resimule une session même si déjà simulée (pratique pour tester).</li>
+                                        <li>• Fin de saison : <b>WDC</b> affiche le classement final.</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div className="flex flex-wrap gap-2 justify-start lg:justify-end">
+                                <button
+                                    onClick={() => simulateNext(false)}
+                                    disabled={simLoading || simAllLoading || !nextSession}
+                                    className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-xl font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {simLoading ? "Simulation..." : "Simuler next"}
+                                </button>
+
+                                <button
+                                    onClick={() => simulateNext(true)}
+                                    disabled={simLoading || simAllLoading || !nextSession}
+                                    className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-xl font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    Force next
+                                </button>
+
+                                <button
+                                    onClick={() => simulateAll(false)}
+                                    disabled={simLoading || simAllLoading || !nextSession}
+                                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-xl font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {simAllLoading ? `Saison... (${simAllProgress.done}/${simAllProgress.total})` : "Simuler tout"}
+                                </button>
+
+                                <button
+                                    onClick={() => simulateAll(true)}
+                                    disabled={simLoading || simAllLoading || !nextSession}
+                                    className="px-4 py-2 bg-emerald-800 hover:bg-emerald-900 rounded-xl font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    Force tout
+                                </button>
+
+                                {simAllLoading && (
+                                    <button
+                                        onClick={() => {
+                                            simAllAbortRef.current = true;
+                                        }}
+                                        className="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-xl font-semibold transition border border-gray-700"
+                                    >
+                                        Stop
+                                    </button>
+                                )}
                             </div>
                         </div>
 
-                        <div className="flex flex-wrap gap-2">
-                            <button
-                                onClick={() => simulateNext(false)}
-                                disabled={simLoading || simAllLoading || !nextSession}
-                                className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-xl font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                {simLoading ? "Simulation..." : "Simuler next"}
-                            </button>
-
-                            <button
-                                onClick={() => simulateNext(true)}
-                                disabled={simLoading || simAllLoading || !nextSession}
-                                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-xl font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                Force next
-                            </button>
-
-                            <button
-                                onClick={() => simulateAll(false)}
-                                disabled={simLoading || simAllLoading || !nextSession}
-                                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-xl font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                {simAllLoading ? `Saison... (${simAllProgress.done}/${simAllProgress.total})` : "Simuler tout"}
-                            </button>
-
-                            <button
-                                onClick={() => simulateAll(true)}
-                                disabled={simLoading || simAllLoading || !nextSession}
-                                className="px-4 py-2 bg-emerald-800 hover:bg-emerald-900 rounded-xl font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                Force tout
-                            </button>
-
-                            {simAllLoading && (
-                                <button
-                                    onClick={() => {
-                                        simAllAbortRef.current = true;
-                                    }}
-                                    className="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-xl font-semibold transition border border-gray-700"
-                                >
-                                    Stop
-                                </button>
+                        <div className="mt-4 flex flex-col gap-2">
+                            {nextSession && (
+                                <div className="text-xs text-gray-400">
+                                    Prochaine session : <b className="text-gray-200">{nextSession.gp_name}</b> • {nextSession.session_type} • index{" "}
+                                    {nextSession.index}
+                                </div>
                             )}
+                            <div className="text-xs text-gray-500">
+                                Astuce : commence par <b>Simuler next</b>, puis utilise <b>Simuler tout</b> quand tu veux avancer vite.
+                            </div>
                         </div>
                     </div>
 
-                    {nextSession && (
-                        <div className="text-xs text-gray-400">
-                            Prochaine session : <b className="text-gray-200">{nextSession.gp_name}</b> • {nextSession.session_type} • index{" "}
-                            {nextSession.index}
+                    {error && (
+                        <div className="p-4 rounded-2xl bg-red-900/40 border border-red-700 text-red-200">
+                            {error}
                         </div>
                     )}
-                    <div className="text-xs text-gray-500">
-                        Astuce : commence par <b>Simuler next</b>, puis utilise <b>Simuler tout</b> quand tu veux avancer vite.
-                    </div>
-                    {error && <div className="p-3 rounded-xl bg-red-900/40 border border-red-700 text-red-200">{error}</div>}
 
-                    {loading ? (
-                        <div className="text-gray-300">Chargement…</div>
-                    ) : gpNames.length === 0 ? (
-                        <div className="border-2 border-gray-700 rounded-2xl p-4 bg-gray-800/50 text-gray-300">
-                            Aucun GP reçu depuis l’API.
-                            <div className="text-xs text-gray-400 mt-2">
-                                Vérifie <b>/api/season/calendar/</b>
+                    {/* Calendar */}
+                    <div className="flex flex-col gap-3">
+                        {loading ? (
+                            <div className="text-gray-300 px-1">Chargement…</div>
+                        ) : gpNames.length === 0 ? (
+                            <div className="border-2 border-gray-700 rounded-2xl p-5 bg-gray-800/50 text-gray-300">
+                                Aucun GP reçu depuis l’API.
+                                <div className="text-xs text-gray-400 mt-2">
+                                    Vérifie <b>/api/season/calendar/</b>
+                                </div>
                             </div>
-                        </div>
-                    ) : (
-                        <div className="flex flex-col gap-3">
-                            {gpNames.map((gpName) => {
+                        ) : (
+                            gpNames.map((gpName) => {
                                 const sessions = calendarByGp[gpName] || [];
                                 const status = gpStatus(sessions);
                                 const ui = statusUI(status);
@@ -512,9 +520,12 @@ export default function StartSeason() {
                                 const circuit = sessions?.[0]?.circuit_name ?? "—";
 
                                 return (
-                                    <div key={gpName} className={`border-2 rounded-2xl p-4 transition ${ui.card}`}>
-                                        <div className="flex items-center justify-between gap-3 cursor-pointer" onClick={() => toggleGp(gpName)}>
-                                            <div className="flex flex-col">
+                                    <div key={gpName} className={`border-2 rounded-2xl p-4 md:p-5 transition ${ui.card}`}>
+                                        <div
+                                            className="flex items-center justify-between gap-3 cursor-pointer"
+                                            onClick={() => toggleGp(gpName)}
+                                        >
+                                            <div className="flex flex-col gap-1">
                                                 <div className="flex items-center gap-2">
                                                     <span className="font-extrabold text-lg">{gpName}</span>
                                                     <span className={`text-xs px-2 py-1 rounded-full border ${ui.pill}`}>{ui.label}</span>
@@ -532,15 +543,19 @@ export default function StartSeason() {
                                                 {sessions.map((s) => (
                                                     <div
                                                         key={s.index}
-                                                        className="rounded-xl bg-gray-800/60 border border-gray-700 px-3 py-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"
+                                                        className="rounded-xl bg-gray-800/60 border border-gray-700 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
                                                     >
                                                         <div className="text-sm text-gray-200">
                                                             <div className="font-semibold">
                                                                 {s.session_type} <span className="text-gray-400">({s.circuit_type})</span>
                                                             </div>
-                                                            <div className="text-gray-300 text-xs mt-0.5">
+                                                            <div className="text-gray-300 text-xs mt-1">
                                                                 Date : {s.date ?? "—"}{" "}
-                                                                {s.is_simulated ? <span className="ml-2 text-green-400">✔ simulé</span> : <span className="ml-2 text-gray-400">non simulé</span>}
+                                                                {s.is_simulated ? (
+                                                                    <span className="ml-2 text-green-400">✔ simulé</span>
+                                                                ) : (
+                                                                    <span className="ml-2 text-gray-400">non simulé</span>
+                                                                )}
                                                             </div>
                                                         </div>
 
@@ -548,14 +563,14 @@ export default function StartSeason() {
                                                             <button
                                                                 onClick={() => simulateOne(s.index, false, s)}
                                                                 disabled={simLoading || simAllLoading}
-                                                                className="px-3 py-1.5 bg-red-600 hover:bg-red-700 rounded-lg font-semibold transition disabled:opacity-50"
+                                                                className="px-3.5 py-2 bg-red-600 hover:bg-red-700 rounded-xl font-semibold transition disabled:opacity-50"
                                                             >
                                                                 Simuler
                                                             </button>
                                                             <button
                                                                 onClick={() => simulateOne(s.index, true, s)}
                                                                 disabled={simLoading || simAllLoading}
-                                                                className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold transition disabled:opacity-50"
+                                                                className="px-3.5 py-2 bg-gray-700 hover:bg-gray-600 rounded-xl font-semibold transition disabled:opacity-50"
                                                             >
                                                                 Force
                                                             </button>
@@ -566,23 +581,24 @@ export default function StartSeason() {
                                         )}
                                     </div>
                                 );
-                            })}
-                        </div>
-                    )}
+                            })
+                        )}
+                    </div>
 
+                    {/* Last results */}
                     {lastResults.length > 0 && (
-                        <div className="mt-2 bg-gray-800 border border-gray-700 rounded-2xl p-4">
-                            <h2 className="font-bold text-lg text-red-400 mb-2">Dernière session</h2>
+                        <div className="bg-gray-800 border border-gray-700 rounded-2xl p-5 md:p-6">
+                            <h2 className="font-extrabold text-lg text-red-400 mb-4">Dernière session</h2>
 
-                            <div className="mb-3 rounded-xl bg-gray-900/50 border border-gray-700 p-3">
-                                <div className="text-xs text-gray-400 mb-2">Stats pilote</div>
+                            <div className="mb-4 rounded-2xl bg-gray-900/50 border border-gray-700 p-4">
+                                <div className="text-xs text-gray-400 mb-3">Stats pilote</div>
                                 <StatsGrid stats={playerStats} prevStats={prevPlayerStats} />
                             </div>
 
                             {playerLast && (
-                                <div className="mb-3 rounded-xl bg-gray-900/50 border border-gray-700 p-3">
+                                <div className="mb-4 rounded-2xl bg-gray-900/50 border border-gray-700 p-4">
                                     <div className="text-xs text-gray-400">Ton résultat</div>
-                                    <div className="mt-1 flex justify-between text-sm">
+                                    <div className="mt-2 flex justify-between text-sm">
                     <span className="font-semibold">
                       {playerLast.position ? `${playerLast.position}. ` : ""}
                         {playerLast.name} {playerLast.surname}
@@ -592,9 +608,12 @@ export default function StartSeason() {
                                 </div>
                             )}
 
-                            <div className="flex flex-col gap-1">
+                            <div className="flex flex-col gap-2">
                                 {lastResults.slice(0, 10).map((r) => (
-                                    <div key={`${r.position}-${r.surname}-${r.number}`} className="flex justify-between text-sm">
+                                    <div
+                                        key={`${r.position}-${r.surname}-${r.number}`}
+                                        className="flex justify-between text-sm rounded-xl bg-gray-900/30 border border-gray-800 px-3 py-2"
+                                    >
                     <span>
                       {r.position ? `${r.position}. ` : ""}
                         {r.name} {r.surname} <span className="text-gray-400">({r.team})</span>
@@ -608,8 +627,8 @@ export default function StartSeason() {
                 </section>
 
                 {/* RIGHT */}
-                <aside className="w-full lg:w-80 flex flex-col gap-6">
-                    <div className={`bg-gray-800 border-2 rounded-2xl p-4 shadow-lg flex flex-col items-center gap-2 ${teamBorder}`}>
+                <aside className="w-full lg:w-[360px] flex flex-col gap-6 lg:sticky lg:top-6 h-fit">
+                    <div className={`bg-gray-800 border-2 rounded-2xl p-5 md:p-6 shadow-lg flex flex-col items-center gap-3 ${teamBorder}`}>
                         <button
                             onClick={() => {
                                 setDriver(null);
@@ -646,32 +665,32 @@ export default function StartSeason() {
                             <span>{team.name}</span>
                         </div>
 
-                        <div className="mt-2 w-full rounded-xl bg-gray-900/50 border border-gray-700 p-3 text-center">
+                        <div className="mt-2 w-full rounded-2xl bg-gray-900/50 border border-gray-700 p-4 text-center">
                             <div className="text-xs text-gray-400">Points</div>
-                            <div className="text-2xl font-black text-white">{playerPoints}</div>
+                            <div className="text-3xl font-black text-white mt-1">{playerPoints}</div>
                         </div>
 
-                        <div className="mt-3 w-full rounded-xl bg-gray-900/50 border border-gray-700 p-3">
-                            <div className="text-xs text-gray-400 mb-2">Stats pilote</div>
+                        <div className="w-full rounded-2xl bg-gray-900/50 border border-gray-700 p-4">
+                            <div className="text-xs text-gray-400 mb-3">Stats pilote</div>
                             <StatsGrid stats={playerStats} prevStats={prevPlayerStats} />
                         </div>
 
                         <button
                             onClick={resetSeason}
                             disabled={simLoading || simAllLoading}
-                            className="mt-3 w-full px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-xl font-semibold transition disabled:opacity-50"
+                            className="w-full px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-xl font-semibold transition disabled:opacity-50"
                         >
                             Reset saison
                         </button>
                     </div>
 
-                    <div className="bg-gray-800 border-2 border-gray-700 rounded-2xl p-4 shadow-lg">
-                        <div className="flex items-center justify-between mb-3">
-                            <h2 className="font-bold text-lg text-red-500">Leaderboard</h2>
+                    <div className="bg-gray-800 border-2 border-gray-700 rounded-2xl p-5 md:p-6 shadow-lg">
+                        <div className="flex items-center justify-between mb-4">
+                            <h2 className="font-extrabold text-lg text-red-500">Leaderboard</h2>
                             <button
                                 onClick={openWdc}
                                 disabled={wdcLoading}
-                                className="text-xs px-3 py-1 rounded-lg bg-gray-700 hover:bg-gray-600 font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                className="text-xs px-3 py-1.5 rounded-xl bg-gray-700 hover:bg-gray-600 font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                             >
                                 {wdcLoading && (
                                     <span className="h-3.5 w-3.5 rounded-full border-2 border-white/60 border-t-transparent animate-spin" />
@@ -685,15 +704,14 @@ export default function StartSeason() {
                         ) : driversBoard.length === 0 ? (
                             <div className="text-gray-300">Aucun pilote dans le classement.</div>
                         ) : (
-                            <div className="flex flex-col gap-1">
+                            <div className="flex flex-col gap-2">
                                 {driversBoard.map((d, idx) => {
                                     const isPlayer = isSameDriver(d, driver);
-
                                     return (
                                         <div
                                             key={`${d.surname}_${d.number}`}
-                                            className={`flex justify-between p-2 rounded-xl ${
-                                                isPlayer ? "bg-gray-700 font-semibold" : "bg-gray-900/30"
+                                            className={`flex justify-between px-3 py-2 rounded-xl border ${
+                                                isPlayer ? "bg-gray-700 border-gray-600 font-semibold" : "bg-gray-900/30 border-gray-800"
                                             }`}
                                         >
                       <span className="text-sm">
