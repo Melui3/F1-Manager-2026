@@ -156,13 +156,8 @@ export default function StartSeason() {
     const [driversBoard, setDriversBoard] = useState([]);
 
     useEffect(() => {
-        console.log("[driversBoard.length]",
-            Array.isArray(driversBoard) ? driversBoard.length : "not array"
-        );
-        console.log("[driversBoard.sample]",
-            Array.isArray(driversBoard) ? driversBoard.slice(0, 3) : driversBoard
-        );
         window.__driversBoard = driversBoard;
+        console.log("[driversBoard.length]", Array.isArray(driversBoard) ? driversBoard.length : "not array");
     }, [driversBoard]);
 
     const [loading, setLoading] = useState(true);
@@ -398,10 +393,21 @@ export default function StartSeason() {
     useEffect(() => {
         if (!seasonDone) return;
         if (wdcShown) return;
+
+        // ✅ si une modal est déjà ouverte, on n'ouvre pas la WDC
         if (activeModal !== null) return;
 
-        setWdcShown(true);
-        setActiveModal("wdc");
+        const openWdc = async () => {
+            // ✅ si board vide, on recharge avant d’ouvrir
+            if (!Array.isArray(driversBoard) || driversBoard.length === 0) {
+                await refreshAll();
+            }
+            setWdcShown(true);
+            setActiveModal("wdc");
+        };
+
+        openWdc();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [seasonDone, wdcShown, activeModal]);
 
     return (
@@ -700,8 +706,8 @@ export default function StartSeason() {
             />
 
             <WdcModal
-                open={wdcModalOpen}
-                onClose={() => setWdcModalOpen(false)}
+                open={activeModal === "wdc"}
+                onClose={() => setActiveModal(null)}
                 board={driversBoard}
                 player={driver}
             />
