@@ -47,7 +47,7 @@ export default function WdcModal({ open, onClose, board, player }) {
     const champion = sorted[0] || null;
 
     // Debug utile (tu peux enlever après)
-    // console.log("[WDC] open", open, "boardLen", safeBoard.length, "sortedLen", sorted.length);
+   console.log("[WDC] open", open, "boardLen", safeBoard.length, "sortedLen", sorted.length);
 
     return (
         <Modal
