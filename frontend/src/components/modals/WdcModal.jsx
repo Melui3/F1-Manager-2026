@@ -22,7 +22,7 @@ const isSameDriver = (a, b) => {
     return !!aSurname && !!bSurname && aSurname === bSurname && aNum !== null && aNum === bNum;
 };
 
-export default function WdcModal({ open, onClose, board, player, loading, error, onReload }) {
+export default function WdcModal({ open, onClose, board, player, loading = false, error = null, onReload }) {
     if (!open) return null;
 
     const safeBoard = Array.isArray(board) ? board : [];
@@ -55,11 +55,14 @@ export default function WdcModal({ open, onClose, board, player, loading, error,
             footer={
                 <div className="flex items-center justify-between gap-3">
                     <button
-                        className="px-4 py-2 rounded-xl bg-gray-800 hover:bg-gray-700 font-semibold text-white border border-gray-700"
+                        className="px-4 py-2 rounded-xl bg-gray-800 hover:bg-gray-700 font-semibold text-white border border-gray-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                         onClick={onReload}
+                        disabled={loading || !onReload}
                     >
+                        {loading && <span className="h-4 w-4 rounded-full border-2 border-white/60 border-t-transparent animate-spin" />}
                         Recharger
                     </button>
+
                     <button
                         className="px-4 py-2 rounded-xl bg-gray-700 hover:bg-gray-600 font-semibold text-white"
                         onClick={onClose}
@@ -70,19 +73,30 @@ export default function WdcModal({ open, onClose, board, player, loading, error,
             }
         >
             {loading ? (
-                <div className="text-gray-200">Chargement du classement…</div>
+                <div className="flex items-center gap-3 text-gray-200">
+                    <span className="h-5 w-5 rounded-full border-2 border-white/60 border-t-transparent animate-spin" />
+                    <div>
+                        <div className="font-bold">Chargement du classement…</div>
+                        <div className="text-sm text-gray-400">On récupère les données des pilotes.</div>
+                    </div>
+                </div>
             ) : error ? (
                 <div className="text-red-200">
                     <div className="font-bold mb-1">Erreur</div>
                     <div className="text-sm text-red-300">{error}</div>
+                    <div className="text-xs text-gray-400 mt-2">Clique “Recharger”. Si ça persiste, l’API renvoie une erreur.</div>
                 </div>
             ) : sorted.length === 0 ? (
                 <div className="text-gray-200">
                     <div className="font-bold mb-1">Aucun pilote reçu.</div>
-                    <div className="text-sm text-gray-400">Clique “Recharger”. Si ça reste vide, l’API renvoie vide.</div>
+                    <div className="text-sm text-gray-400">
+                        Soit la requête a renvoyé une liste vide, soit le backend n’a pas de données en base.
+                        Clique “Recharger” pour retenter.
+                    </div>
                 </div>
             ) : (
                 <div className="flex flex-col gap-4">
+                    {/* Champion */}
                     <div className="rounded-2xl border border-gray-700 bg-gray-900/30 p-4">
                         <div className="text-xs text-gray-400 mb-1">Champion</div>
                         <div className="flex items-center justify-between gap-3">
@@ -94,6 +108,7 @@ export default function WdcModal({ open, onClose, board, player, loading, error,
                         </div>
                     </div>
 
+                    {/* Classement */}
                     <div className="rounded-2xl border border-gray-700 bg-gray-900/30 p-4">
                         <div className="font-extrabold text-white mb-3">Classement</div>
 
@@ -111,9 +126,7 @@ export default function WdcModal({ open, onClose, board, player, loading, error,
                                     >
                                         <div className="text-sm text-gray-200">
                                             <span className="font-bold">{rank}.</span>{" "}
-                                            <span className="font-semibold">
-                        {d?.name} {d?.surname}
-                      </span>{" "}
+                                            <span className="font-semibold">{d?.name} {d?.surname}</span>{" "}
                                             <span className="text-gray-500">({d?.team})</span>
                                             {d?.number != null && <span className="text-gray-500"> • #{d.number}</span>}
                                         </div>

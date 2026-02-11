@@ -421,7 +421,18 @@ export default function StartSeason() {
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                         <div>
                             <h1 className="text-4xl font-extrabold">Calendrier 2026</h1>
-                            <p className="text-sm text-gray-300 mt-1">Clique un GP pour dérouler les sessions et simuler.</p>
+                            <div className="rounded-2xl border border-gray-700 bg-gray-800/60 p-4">
+                                <h2 className="text-lg font-extrabold text-white mb-2">Comment ça marche ?</h2>
+                                <ul className="text-sm text-gray-200 space-y-1">
+                                    <li>• Clique un <b>GP</b> pour afficher ses sessions (Practice / Qualif / Race).</li>
+                                    <li>• <b>Simuler</b> lance la session et ouvre la modale de résultats.</li>
+                                    <li>• <b>Simuler next</b> lance la prochaine session non simulée.</li>
+                                    <li>• <b>Simuler tout</b> enchaîne toutes les sessions restantes.</li>
+                                    <li>• Après chaque session : points + progression stats, et le <b>Leaderboard</b> se met à jour.</li>
+                                    <li>• <b>Force</b> resimule une session même si déjà simulée (pratique pour tester).</li>
+                                    <li>• Fin de saison : <b>WDC</b> affiche le classement final.</li>
+                                </ul>
+                            </div>
                         </div>
 
                         <div className="flex flex-wrap gap-2">
@@ -476,7 +487,9 @@ export default function StartSeason() {
                             {nextSession.index}
                         </div>
                     )}
-
+                    <div className="text-xs text-gray-500">
+                        Astuce : commence par <b>Simuler next</b>, puis utilise <b>Simuler tout</b> quand tu veux avancer vite.
+                    </div>
                     {error && <div className="p-3 rounded-xl bg-red-900/40 border border-red-700 text-red-200">{error}</div>}
 
                     {loading ? (
@@ -657,9 +670,13 @@ export default function StartSeason() {
                             <h2 className="font-bold text-lg text-red-500">Leaderboard</h2>
                             <button
                                 onClick={openWdc}
-                                className="text-xs px-3 py-1 rounded-lg bg-gray-700 hover:bg-gray-600 font-semibold"
+                                disabled={wdcLoading}
+                                className="text-xs px-3 py-1 rounded-lg bg-gray-700 hover:bg-gray-600 font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                             >
-                                {wdcLoading ? "..." : "WDC"}
+                                {wdcLoading && (
+                                    <span className="h-3.5 w-3.5 rounded-full border-2 border-white/60 border-t-transparent animate-spin" />
+                                )}
+                                WDC
                             </button>
                         </div>
 
