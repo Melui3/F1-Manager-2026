@@ -1,7 +1,6 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useMemo } from "react";
 import Modal from "./Modal";
 
-// helpers robustes (même logique que StartSeason)
 const clean = (s) =>
     String(s ?? "")
         .trim()
@@ -23,26 +22,18 @@ const isSameDriver = (a, b) => {
     return !!aSurname && !!bSurname && aSurname === bSurname && aNum !== null && aNum === bNum;
 };
 
-export default function WdcModal({ open, onClose, board, player }) {
-    const safeBoard = Array.isArray(board) ? board : [];
+export default function WdcModal({ open, onClose, board, player, loading, error, onReload }) {
+    if (!open) return null;
 
-    // ✅ logs propres : seulement quand la modale s’ouvre / board change
-    useEffect(() => {
-        if (!open) return;
-        console.log("[WDC] open:", open);
-        console.log("[WDC] board length:", safeBoard.length);
-        console.log("[WDC] sample:", safeBoard.slice(0, 3));
-    }, [open, safeBoard.length]); // length suffit, évite spam
+    const safeBoard = Array.isArray(board) ? board : [];
 
     const sorted = useMemo(() => {
         const arr = [...safeBoard];
         arr.sort((a, b) => {
             const pa = Number(a?.points ?? 0);
             const pb = Number(b?.points ?? 0);
-
             const wa = Number(a?.wins ?? 0);
             const wb = Number(b?.wins ?? 0);
-
             const pda = Number(a?.podiums ?? 0);
             const pdb = Number(b?.podiums ?? 0);
 
@@ -55,8 +46,6 @@ export default function WdcModal({ open, onClose, board, player }) {
 
     const champion = sorted[0] || null;
 
-    if (!open) return null;
-
     return (
         <Modal
             open={open}
@@ -64,7 +53,13 @@ export default function WdcModal({ open, onClose, board, player }) {
             onClose={onClose}
             maxWidth="max-w-4xl"
             footer={
-                <div className="flex justify-end">
+                <div className="flex items-center justify-between gap-3">
+                    <button
+                        className="px-4 py-2 rounded-xl bg-gray-800 hover:bg-gray-700 font-semibold text-white border border-gray-700"
+                        onClick={onReload}
+                    >
+                        Recharger
+                    </button>
                     <button
                         className="px-4 py-2 rounded-xl bg-gray-700 hover:bg-gray-600 font-semibold text-white"
                         onClick={onClose}
@@ -74,18 +69,20 @@ export default function WdcModal({ open, onClose, board, player }) {
                 </div>
             }
         >
-            {sorted.length === 0 ? (
+            {loading ? (
+                <div className="text-gray-200">Chargement du classement…</div>
+            ) : error ? (
+                <div className="text-red-200">
+                    <div className="font-bold mb-1">Erreur</div>
+                    <div className="text-sm text-red-300">{error}</div>
+                </div>
+            ) : sorted.length === 0 ? (
                 <div className="text-gray-200">
-                    <div className="font-bold mb-1">Aucun classement reçu.</div>
-                    <div className="text-sm text-gray-400">
-                        Le front n’a pas reçu <code className="text-gray-300">/api/drivers/</code> au moment où la modale s’ouvre.
-                        <br />
-                        (Donc: problème de fetch, token, ou CORS.)
-                    </div>
+                    <div className="font-bold mb-1">Aucun pilote reçu.</div>
+                    <div className="text-sm text-gray-400">Clique “Recharger”. Si ça reste vide, l’API renvoie vide.</div>
                 </div>
             ) : (
                 <div className="flex flex-col gap-4">
-                    {/* Champion */}
                     <div className="rounded-2xl border border-gray-700 bg-gray-900/30 p-4">
                         <div className="text-xs text-gray-400 mb-1">Champion</div>
                         <div className="flex items-center justify-between gap-3">
@@ -97,7 +94,6 @@ export default function WdcModal({ open, onClose, board, player }) {
                         </div>
                     </div>
 
-                    {/* Classement */}
                     <div className="rounded-2xl border border-gray-700 bg-gray-900/30 p-4">
                         <div className="font-extrabold text-white mb-3">Classement</div>
 

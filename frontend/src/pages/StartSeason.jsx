@@ -35,7 +35,7 @@ const TEAM_STYLE = {
     "Visa Cash App Racing Bulls F1 Team": "border-indigo-400/60 shadow-indigo-400/20",
 };
 
-// ✅ robust helpers (accents, tirets, num string/number)
+// ✅ robust helpers
 const clean = (s) =>
     String(s ?? "")
         .trim()
@@ -57,7 +57,6 @@ const isSameDriver = (a, b) => {
     return !!aSurname && !!bSurname && aSurname === bSurname && aNum !== null && aNum === bNum;
 };
 
-// === images frontend: public/drivers/surname_lower_number.avif
 function driverImgSrc(d) {
     const base = import.meta.env.BASE_URL || "/";
     const surname = d?.surname ?? "";
@@ -72,7 +71,6 @@ function teamLogoSrc(teamName) {
     return key ? `${base}teams/${key}.avif` : null;
 }
 
-// status GP basé sur sessions simulées
 function gpStatus(sessions = []) {
     if (!sessions.length) return "upcoming";
     const total = sessions.length;
@@ -165,9 +163,14 @@ export default function StartSeason() {
 
     const [resultsTick, setResultsTick] = useState(0);
 
-    // ✅ UN SEUL MODAL MANAGER
+    // ✅ ONE MODAL MANAGER
     const [activeModal, setActiveModal] = useState(null); // null | "session" | "wdc"
     const [wdcShown, setWdcShown] = useState(false);
+
+    // ✅ WDC dedicated board (anti “modale vide”)
+    const [wdcBoard, setWdcBoard] = useState([]);
+    const [wdcLoading, setWdcLoading] = useState(false);
+    const [wdcError, setWdcError] = useState(null);
 
     // === SIMULER TOUT ===
     const [simAllLoading, setSimAllLoading] = useState(false);
@@ -188,7 +191,6 @@ export default function StartSeason() {
         );
     }
 
-    // group calendar by GP
     const calendarByGp = useMemo(() => {
         const map = {};
         for (const s of calendar) {
@@ -204,7 +206,6 @@ export default function StartSeason() {
 
     const gpNames = useMemo(() => Object.keys(calendarByGp), [calendarByGp]);
 
-    // flat sessions sorted by index
     const flatSessions = useMemo(() => {
         const arr = Array.isArray(calendar) ? [...calendar] : [];
         arr.sort((a, b) => (a?.index ?? 0) - (b?.index ?? 0));
@@ -234,19 +235,8 @@ export default function StartSeason() {
         })();
     }, []);
 
-    // ✅ logs propres (pas de spam)
+    // points joueur depuis leaderboard
     const playerRow = useMemo(() => driversBoard.find((d) => isSameDriver(d, driver)) || null, [driversBoard, driver]);
-
-    useEffect(() => {
-        if (!playerRow) return;
-        console.log("[playerRow]", playerRow);
-    }, [playerRow]);
-
-    useEffect(() => {
-        if (!lastResults?.length) return;
-        console.log("[lastResults[0]]", lastResults[0]);
-    }, [lastResults]);
-
     const playerPoints = playerRow?.points ?? 0;
 
     const playerLast = useMemo(
@@ -279,6 +269,28 @@ export default function StartSeason() {
 
     const toggleGp = (gpName) => setExpandedGp((cur) => (cur === gpName ? null : gpName));
 
+    // ✅ Open WDC (fetch dedicated board NOW)
+    const openWdc = async () => {
+        try {
+            setWdcError(null);
+            setWdcLoading(true);
+
+            const board = await apiFetch("/api/drivers/");
+            const safe = Array.isArray(board) ? board : [];
+            setWdcBoard(safe);
+
+            setActiveModal("wdc");
+        } catch (e) {
+            console.error(e);
+            setWdcBoard([]);
+            setWdcError(e?.message || "Erreur chargement WDC");
+            setActiveModal("wdc");
+        } finally {
+            setWdcLoading(false);
+        }
+    };
+
+    // ===== Simulate 1 session (avec modal)
     const simulateOne = async (sessionIndex, force = false, metaOverride = null) => {
         try {
             if (playerStats) setPrevPlayerStats(playerStats);
@@ -297,7 +309,6 @@ export default function StartSeason() {
             setResultsTick((t) => t + 1);
 
             await refreshAll();
-
             setActiveModal("session");
         } catch (e) {
             console.error(e);
@@ -374,9 +385,10 @@ export default function StartSeason() {
             setWdcShown(false);
             setActiveModal(null);
             setLastSessionMeta(null);
+            setWdcBoard([]);
+            setWdcError(null);
 
             setResultsTick((t) => t + 1);
-
             await refreshAll();
         } catch (e) {
             console.error(e);
@@ -386,39 +398,18 @@ export default function StartSeason() {
         }
     };
 
-    // ✅ Auto-open WDC fin de saison (mais seulement si driversBoard rempli)
+    // ✅ Auto WDC end season (fetch WDC board, not driversBoard)
     useEffect(() => {
         if (!seasonDone) return;
         if (wdcShown) return;
         if (activeModal !== null) return;
 
         (async () => {
-            try {
-                // si board vide, recharge
-                if (!Array.isArray(driversBoard) || driversBoard.length === 0) {
-                    await refreshAll();
-                }
-                setWdcShown(true);
-                setActiveModal("wdc");
-            } catch (e) {
-                console.error(e);
-            }
+            setWdcShown(true);
+            await openWdc();
         })();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [seasonDone, wdcShown, activeModal]);
-
-    // ✅ Ouvrir WDC manuellement = garantit board non vide
-    const openWdc = async () => {
-        try {
-            if (!Array.isArray(driversBoard) || driversBoard.length === 0) {
-                await refreshAll();
-            }
-            setActiveModal("wdc");
-        } catch (e) {
-            console.error(e);
-            setError(e?.message || "Erreur WDC");
-        }
-    };
 
     return (
         <div className="min-h-screen bg-gray-900 flex flex-col text-white">
@@ -481,8 +472,8 @@ export default function StartSeason() {
 
                     {nextSession && (
                         <div className="text-xs text-gray-400">
-                            Prochaine session : <b className="text-gray-200">{nextSession.gp_name}</b> • {nextSession.session_type} •
-                            index {nextSession.index}
+                            Prochaine session : <b className="text-gray-200">{nextSession.gp_name}</b> • {nextSession.session_type} • index{" "}
+                            {nextSession.index}
                         </div>
                     )}
 
@@ -536,11 +527,7 @@ export default function StartSeason() {
                                                             </div>
                                                             <div className="text-gray-300 text-xs mt-0.5">
                                                                 Date : {s.date ?? "—"}{" "}
-                                                                {s.is_simulated ? (
-                                                                    <span className="ml-2 text-green-400">✔ simulé</span>
-                                                                ) : (
-                                                                    <span className="ml-2 text-gray-400">non simulé</span>
-                                                                )}
+                                                                {s.is_simulated ? <span className="ml-2 text-green-400">✔ simulé</span> : <span className="ml-2 text-gray-400">non simulé</span>}
                                                             </div>
                                                         </div>
 
@@ -672,7 +659,7 @@ export default function StartSeason() {
                                 onClick={openWdc}
                                 className="text-xs px-3 py-1 rounded-lg bg-gray-700 hover:bg-gray-600 font-semibold"
                             >
-                                WDC
+                                {wdcLoading ? "..." : "WDC"}
                             </button>
                         </div>
 
@@ -688,7 +675,9 @@ export default function StartSeason() {
                                     return (
                                         <div
                                             key={`${d.surname}_${d.number}`}
-                                            className={`flex justify-between p-2 rounded-xl ${isPlayer ? "bg-gray-700 font-semibold" : "bg-gray-900/30"}`}
+                                            className={`flex justify-between p-2 rounded-xl ${
+                                                isPlayer ? "bg-gray-700 font-semibold" : "bg-gray-900/30"
+                                            }`}
                                         >
                       <span className="text-sm">
                         {idx + 1}. {d.name} {d.surname} <span className="text-gray-400">({d.team})</span>
@@ -703,7 +692,6 @@ export default function StartSeason() {
                 </aside>
             </main>
 
-            {/* ✅ UNE SEULE MODALE ACTIVE À LA FOIS */}
             <SessionResultsModal
                 open={activeModal === "session"}
                 onClose={() => setActiveModal(null)}
@@ -714,7 +702,15 @@ export default function StartSeason() {
                 prevPlayerStats={prevPlayerStats}
             />
 
-            <WdcModal open={activeModal === "wdc"} onClose={() => setActiveModal(null)} board={driversBoard} player={driver} />
+            <WdcModal
+                open={activeModal === "wdc"}
+                onClose={() => setActiveModal(null)}
+                board={wdcBoard}
+                player={driver}
+                loading={wdcLoading}
+                error={wdcError}
+                onReload={openWdc}
+            />
         </div>
     );
 }
