@@ -320,7 +320,7 @@ export default function StartSeason() {
             setResultsTick((t) => t + 1);
 
             await refreshAll();
-
+            setWdcModalOpen(false);
             setSessionModalOpen(true);
         } catch (e) {
             console.error(e);
@@ -421,11 +421,15 @@ export default function StartSeason() {
 
     // afficher WDC quand saison finie
     useEffect(() => {
-        if (seasonDone && !wdcShown) {
-            setWdcShown(true);
-            setWdcModalOpen(true);
-        }
-    }, [seasonDone, wdcShown]);
+        if (!seasonDone) return;
+        if (wdcShown) return;
+
+        // ✅ si la modal de session est encore ouverte, on attend
+        if (sessionModalOpen) return;
+
+        setWdcShown(true);
+        setWdcModalOpen(true);
+    }, [seasonDone, wdcShown, sessionModalOpen]);
 
     return (
         <div className="min-h-screen bg-gray-900 flex flex-col text-white">
@@ -723,7 +727,12 @@ export default function StartSeason() {
                 prevPlayerStats={prevPlayerStats}
             />
 
-            <WdcModal open={wdcModalOpen} onClose={() => setWdcModalOpen(false)} board={driversBoard} />
+            <WdcModal
+                open={wdcModalOpen}
+                onClose={() => setWdcModalOpen(false)}
+                board={driversBoard}
+                player={driver}
+            />
         </div>
     );
 }

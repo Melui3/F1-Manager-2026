@@ -14,13 +14,23 @@ const num = (x) => {
     return Number.isFinite(n) ? n : null;
 };
 
-const sameDriver = (a, b) => {
-    if (!a || !b) return false;
-    const aSurname = clean(a?.surname);
-    const bSurname = clean(b?.surname);
-    const aNum = num(a?.number);
-    const bNum = num(b?.number);
-    return !!aSurname && !!bSurname && aSurname === bSurname && aNum !== null && aNum === bNum;
+const sameDriver = (row, player) => {
+    if (!row || !player) return false;
+
+    // ✅ PRIORITÉ ABSOLUE : match par ID (backend renvoie "id")
+    const rowId = row?.id ?? row?.driver_id;
+    const playerId = player?.id;
+    if (rowId != null && playerId != null) {
+        return String(rowId) === String(playerId);
+    }
+
+    // fallback surname+number
+    const rowSurname = clean(row?.surname);
+    const playerSurname = clean(player?.surname);
+    const rowNum = num(row?.number);
+    const playerNum = num(player?.number);
+
+    return !!rowSurname && !!playerSurname && rowSurname === playerSurname && rowNum !== null && rowNum === playerNum;
 };
 
 // ===== UI stats =====
@@ -111,13 +121,11 @@ export default function SessionResultsModal({
                 </div>
             }
         >
-            {/* Stats pilote */}
             <div className="rounded-2xl border border-gray-700 bg-gray-900/30 p-4 mb-4">
                 <div className="text-xs text-gray-400 mb-2">Stats pilote</div>
                 <StatsGrid stats={playerStats} prevStats={prevPlayerStats} />
             </div>
 
-            {/* Ton résultat */}
             <div className="rounded-2xl border border-gray-700 bg-gray-800/60 p-4 mb-4">
                 <div className="text-xs text-gray-400">Ton résultat</div>
 
@@ -133,12 +141,11 @@ export default function SessionResultsModal({
                     </div>
                 ) : (
                     <div className="mt-2 text-gray-300">
-                        Pas trouvé dans les résultats. (Vérifie number/surname côté player sélectionné.)
+                        Pas trouvé dans les résultats. (Ton player n’a pas le même id/number que ce que renvoie l’API.)
                     </div>
                 )}
             </div>
 
-            {/* Top 10 */}
             <div className="rounded-2xl border border-gray-700 bg-gray-900/30 p-4">
                 <div className="font-extrabold text-white mb-3">Classement (Top 10)</div>
 
@@ -148,7 +155,7 @@ export default function SessionResultsModal({
                     <div className="flex flex-col gap-2">
                         {sorted.slice(0, 10).map((r) => (
                             <div
-                                key={`${r.position}-${r.surname}-${r.number}`}
+                                key={`${r.position}-${r.surname}-${r.number}-${r.id ?? "x"}`}
                                 className="flex items-center justify-between rounded-xl border border-gray-800 bg-gray-900/40 px-3 py-2"
                             >
                                 <div className="text-sm text-gray-200">
