@@ -155,6 +155,16 @@ export default function StartSeason() {
     const [calendar, setCalendar] = useState([]);
     const [driversBoard, setDriversBoard] = useState([]);
 
+    useEffect(() => {
+        console.log("[driversBoard.length]",
+            Array.isArray(driversBoard) ? driversBoard.length : "not array"
+        );
+        console.log("[driversBoard.sample]",
+            Array.isArray(driversBoard) ? driversBoard.slice(0, 3) : driversBoard
+        );
+        window.__driversBoard = driversBoard;
+    }, [driversBoard]);
+
     const [loading, setLoading] = useState(true);
     const [simLoading, setSimLoading] = useState(false);
     const [error, setError] = useState(null);
