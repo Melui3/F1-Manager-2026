@@ -1,6 +1,9 @@
 // src/services/api.js
 
-const API_BASE = (import.meta.env.VITE_API_BASE || "").replace(/\/$/, "");
+import { mockDispatch, mockLogin as _mockLogin } from "./mockApi.js";
+
+const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === "true";
+const API_BASE  = (import.meta.env.VITE_API_BASE  || "").replace(/\/$/, "");
 
 // Compat: si tu utilises mon GameContext persistant
 const CTX_USER_KEY = "f1m26_user"; // contient { accessToken, refreshToken } chez toi
@@ -119,6 +122,8 @@ async function refreshAccessToken() {
  * options.authToken : si tu veux forcer un token spécifique (optionnel)
  */
 export async function apiFetch(path, options = {}) {
+    if (DEMO_MODE) return mockDispatch(path, options);
+
     const url = joinUrl(API_BASE, path);
 
     const makeHeaders = (forcedToken) => {
@@ -156,6 +161,8 @@ export async function apiFetch(path, options = {}) {
 }
 
 export async function login(username, password) {
+    if (DEMO_MODE) return _mockLogin(username);
+
     const url = joinUrl(API_BASE, "/api/auth/login/");
     const res = await fetch(url, {
         method: "POST",

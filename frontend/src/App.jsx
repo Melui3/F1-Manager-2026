@@ -1,4 +1,3 @@
-import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 
 import LoginScreen from "./pages/LoginScreen.jsx";
@@ -9,6 +8,17 @@ import StartSeason from "./pages/StartSeason.jsx";
 import Profile from "./pages/Profile.jsx";
 
 import { useGame } from "./context/GameContext";
+
+const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === "true";
+
+function DemoBanner() {
+    if (!DEMO_MODE) return null;
+    return (
+        <div className="w-full bg-f1-yellow/10 border-b border-f1-yellow/30 text-f1-yellow text-center text-xs font-semibold py-1.5 tracking-wide">
+            ⚡ Mode démo — aucun compte requis, données simulées côté client
+        </div>
+    );
+}
 
 function HomeRedirect() {
     const { ready, isAuthenticated } = useGame();
@@ -21,6 +31,8 @@ function HomeRedirect() {
 
 export default function App() {
     return (
+        <>
+        <DemoBanner />
         <Routes>
             {/* ✅ Fix: route racine */}
             <Route path="/" element={<HomeRedirect />} />
@@ -37,5 +49,6 @@ export default function App() {
             {/* ✅ fallback si route inconnue */}
             <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </>
     );
 }

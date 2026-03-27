@@ -1,10 +1,13 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useGame } from "../context/GameContext";
 import Header from "../components/Header.jsx";
 import { apiFetch } from "../services/api";
 import SessionResultsModal from "../components/modals/SessionResultsModal";
 import WdcModal from "../components/modals/WdcModal";
+import Button from "../components/ui/Button";
+import Alert from "../components/ui/Alert";
+import Card from "../components/ui/Card";
 
 // === TEAM MAPS ===
 const TEAM_KEY_MAP = {
@@ -35,14 +38,8 @@ const TEAM_STYLE = {
     "Visa Cash App Racing Bulls F1 Team": "border-indigo-400/60 shadow-indigo-400/20",
 };
 
-// ✅ robust helpers
 const clean = (s) =>
-    String(s ?? "")
-        .trim()
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/[^a-z0-9]+/g, "");
+    String(s ?? "").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "");
 
 const getNumber = (x) => {
     const n = Number(String(x ?? "").trim());
@@ -84,37 +81,38 @@ function statusUI(status) {
     switch (status) {
         case "done":
             return {
-                card: "border-green-500/40 bg-green-900/10 hover:bg-green-900/15",
-                pill: "bg-green-500/15 text-green-300 border-green-500/30",
+                card: "border-f1-green/30 bg-f1-green/5 hover:bg-f1-green/8",
+                pill: "bg-f1-green/15 text-f1-green border-f1-green/30",
                 label: "Déjà passé",
             };
         case "in_progress":
             return {
-                card: "border-yellow-500/40 bg-yellow-900/10 hover:bg-yellow-900/15",
-                pill: "bg-yellow-500/15 text-yellow-300 border-yellow-500/30",
+                card: "border-f1-yellow/30 bg-f1-yellow/5 hover:bg-f1-yellow/8",
+                pill: "bg-f1-yellow/15 text-f1-yellow border-f1-yellow/30",
                 label: "En cours",
             };
         default:
             return {
-                card: "border-sky-500/40 bg-sky-900/10 hover:bg-sky-900/15",
+                card: "border-sky-500/30 bg-sky-500/5 hover:bg-sky-500/8",
                 pill: "bg-sky-500/15 text-sky-300 border-sky-500/30",
                 label: "Prochainement",
             };
     }
 }
 
-// ===== UI stats =====
 function StatCell({ label, value, delta }) {
     const d = typeof delta === "number" ? delta : null;
     const deltaTxt = d === null ? null : d > 0 ? `+${d}` : `${d}`;
 
     return (
-        <div className="rounded-xl border border-gray-700 bg-gray-900/30 p-3">
-            <div className="text-[11px] text-gray-400">{label}</div>
-            <div className="flex items-baseline justify-between gap-3 mt-0.5">
-                <div className="text-sm font-extrabold text-white">{value ?? "—"}</div>
+        <div className="rounded-xl border border-f1-border bg-f1-dark/50 p-3">
+            <div className="text-[11px] text-f1-muted">{label}</div>
+            <div className="flex items-baseline justify-between gap-2 mt-0.5">
+                <div className="font-f1-display text-sm font-bold text-f1-white">{value ?? "—"}</div>
                 {deltaTxt !== null && deltaTxt !== "0" && (
-                    <div className={`text-xs font-bold ${d > 0 ? "text-green-400" : "text-red-400"}`}>{deltaTxt}</div>
+                    <div className={`text-xs font-bold ${d > 0 ? "text-f1-green" : "text-f1-red"}`}>
+                        {deltaTxt}
+                    </div>
                 )}
             </div>
         </div>
@@ -122,22 +120,22 @@ function StatCell({ label, value, delta }) {
 }
 
 function StatsGrid({ stats, prevStats }) {
-    if (!stats) return <div className="text-sm text-gray-300">Stats indisponibles.</div>;
+    if (!stats) return <div className="text-sm text-f1-silver">Stats indisponibles.</div>;
 
     const delta = (k) =>
         typeof stats?.[k] === "number" && typeof prevStats?.[k] === "number" ? stats[k] - prevStats[k] : null;
 
     return (
-        <div className="grid grid-cols-3 gap-3">
-            <StatCell label="Speed" value={stats.speed} delta={delta("speed")} />
-            <StatCell label="Racing" value={stats.racing} delta={delta("racing")} />
-            <StatCell label="Reaction" value={stats.reaction} delta={delta("reaction")} />
-            <StatCell label="Experience" value={stats.experience} delta={delta("experience")} />
+        <div className="grid grid-cols-3 gap-2">
+            <StatCell label="Speed"       value={stats.speed}       delta={delta("speed")} />
+            <StatCell label="Racing"      value={stats.racing}      delta={delta("racing")} />
+            <StatCell label="Reaction"    value={stats.reaction}    delta={delta("reaction")} />
+            <StatCell label="Experience"  value={stats.experience}  delta={delta("experience")} />
             <StatCell label="Consistency" value={stats.consistency} delta={delta("consistency")} />
-            <StatCell label="Error rate" value={stats.error_rate} delta={delta("error_rate")} />
-            <StatCell label="Street" value={stats.street} delta={delta("street")} />
-            <StatCell label="High speed" value={stats.high} delta={delta("high")} />
-            <StatCell label="Wet" value={stats.wet} delta={delta("wet")} />
+            <StatCell label="Error rate"  value={stats.error_rate}  delta={delta("error_rate")} />
+            <StatCell label="Street"      value={stats.street}      delta={delta("street")} />
+            <StatCell label="High speed"  value={stats.high}        delta={delta("high")} />
+            <StatCell label="Wet"         value={stats.wet}         delta={delta("wet")} />
         </div>
     );
 }
@@ -147,7 +145,6 @@ export default function StartSeason() {
     const navigate = useNavigate();
 
     const [expandedGp, setExpandedGp] = useState(null);
-
     const [calendar, setCalendar] = useState([]);
     const [driversBoard, setDriversBoard] = useState([]);
 
@@ -163,28 +160,25 @@ export default function StartSeason() {
 
     const [resultsTick, setResultsTick] = useState(0);
 
-    // ✅ ONE MODAL MANAGER
-    const [activeModal, setActiveModal] = useState(null); // null | "session" | "wdc"
+    const [activeModal, setActiveModal] = useState(null);
     const [wdcShown, setWdcShown] = useState(false);
 
-    // ✅ WDC dedicated board (anti “modale vide”)
     const [wdcBoard, setWdcBoard] = useState([]);
     const [wdcLoading, setWdcLoading] = useState(false);
     const [wdcError, setWdcError] = useState(null);
 
-    // === SIMULER TOUT ===
     const [simAllLoading, setSimAllLoading] = useState(false);
     const [simAllProgress, setSimAllProgress] = useState({ done: 0, total: 0 });
     const simAllAbortRef = useRef(false);
 
     if (!team || !driver) {
         return (
-            <div className="min-h-screen bg-gray-900 text-white flex flex-col">
+            <div className="min-h-screen bg-f1-dark text-f1-white flex flex-col">
                 <Header userName={userName} />
                 <main className="flex-1 p-6 flex items-center justify-center">
                     <div className="text-center">
-                        <h1 className="text-3xl font-extrabold mb-2">Team ou pilote manquant</h1>
-                        <p className="text-gray-300">Retourne choisir une team puis un pilote.</p>
+                        <h1 className="font-f1-display text-2xl font-bold mb-2">Team ou pilote manquant</h1>
+                        <p className="text-f1-silver">Retourne choisir une team puis un pilote.</p>
                     </div>
                 </main>
             </div>
@@ -240,6 +234,7 @@ export default function StartSeason() {
 
     const playerLast = useMemo(
         () => lastResults.find((r) => isSameDriver(r, driver)) || null,
+        // eslint-disable-next-line react-hooks/exhaustive-deps
         [lastResults, driver, resultsTick]
     );
 
@@ -259,7 +254,7 @@ export default function StartSeason() {
         });
     }, [playerRow]);
 
-    const teamBorder = TEAM_STYLE[team.name] || "border-gray-700 shadow-black/0";
+    const teamBorder = TEAM_STYLE[team.name] || "border-f1-border";
 
     const seasonDone = useMemo(
         () => Array.isArray(calendar) && calendar.length > 0 && calendar.every((s) => !!s.is_simulated),
@@ -272,11 +267,8 @@ export default function StartSeason() {
         try {
             setWdcError(null);
             setWdcLoading(true);
-
             const board = await apiFetch("/api/drivers/");
-            const safe = Array.isArray(board) ? board : [];
-            setWdcBoard(safe);
-
+            setWdcBoard(Array.isArray(board) ? board : []);
             setActiveModal("wdc");
         } catch (e) {
             console.error(e);
@@ -291,14 +283,15 @@ export default function StartSeason() {
     const simulateOne = async (sessionIndex, force = false, metaOverride = null) => {
         try {
             if (playerStats) setPrevPlayerStats(playerStats);
-
             setSimLoading(true);
             setError(null);
 
             const meta = metaOverride || flatSessions.find((s) => s?.index === sessionIndex) || null;
             setLastSessionMeta(meta);
 
-            const url = force ? `/api/simulate/session/${sessionIndex}/?force=1` : `/api/simulate/session/${sessionIndex}/`;
+            const url = force
+                ? `/api/simulate/session/${sessionIndex}/?force=1`
+                : `/api/simulate/session/${sessionIndex}/`;
             const res = await apiFetch(url, { method: "POST", body: JSON.stringify({}) });
 
             const results = Array.isArray(res?.results) ? res.results : [];
@@ -319,7 +312,9 @@ export default function StartSeason() {
         const meta = metaOverride || flatSessions.find((s) => s?.index === sessionIndex) || null;
         setLastSessionMeta(meta);
 
-        const url = force ? `/api/simulate/session/${sessionIndex}/?force=1` : `/api/simulate/session/${sessionIndex}/`;
+        const url = force
+            ? `/api/simulate/session/${sessionIndex}/?force=1`
+            : `/api/simulate/session/${sessionIndex}/`;
         const res = await apiFetch(url, { method: "POST", body: JSON.stringify({}) });
 
         const results = Array.isArray(res?.results) ? res.results : [];
@@ -343,13 +338,11 @@ export default function StartSeason() {
             setSimAllLoading(true);
             setError(null);
             setSimAllProgress({ done: 0, total: remaining.length });
-
             setActiveModal(null);
 
             for (let i = 0; i < remaining.length; i++) {
                 if (simAllAbortRef.current) break;
                 if (playerStats) setPrevPlayerStats(playerStats);
-
                 const s = remaining[i];
                 await simulateOneSilent(s.index, force, s);
                 setSimAllProgress({ done: i + 1, total: remaining.length });
@@ -375,17 +368,15 @@ export default function StartSeason() {
             setDriversBoard([]);
             setLastResults([]);
             setExpandedGp(null);
-
             setPrevPlayerStats(null);
             setPlayerStats(null);
-
             setWdcShown(false);
             setActiveModal(null);
             setLastSessionMeta(null);
             setWdcBoard([]);
             setWdcError(null);
-
             setResultsTick((t) => t + 1);
+
             await refreshAll();
         } catch (e) {
             console.error(e);
@@ -396,10 +387,7 @@ export default function StartSeason() {
     };
 
     useEffect(() => {
-        if (!seasonDone) return;
-        if (wdcShown) return;
-        if (activeModal !== null) return;
-
+        if (!seasonDone || wdcShown || activeModal !== null) return;
         (async () => {
             setWdcShown(true);
             await openWdc();
@@ -407,173 +395,189 @@ export default function StartSeason() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [seasonDone, wdcShown, activeModal]);
 
+    const isBusy = simLoading || simAllLoading;
+
     return (
-        <div className="min-h-screen bg-gray-900 flex flex-col text-white">
+        <div className="min-h-screen bg-f1-dark flex flex-col text-f1-white">
             <Header userName={userName} />
 
             <main className="flex-1 p-4 md:p-6 lg:p-8 flex flex-col lg:flex-row gap-6 lg:gap-8">
                 {/* LEFT */}
-                <section className="flex-1 flex flex-col gap-6">
-                    {/* Title + How-to + Buttons */}
-                    <div className="rounded-2xl border border-gray-700 bg-gray-800/30 p-5 md:p-6">
+                <section className="flex-1 flex flex-col gap-5">
+                    {/* Header card */}
+                    <Card stripe className="p-5 md:p-6">
                         <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-5">
                             <div className="flex-1">
-                                <h1 className="text-3xl md:text-4xl font-extrabold">Calendrier 2026</h1>
+                                <h1 className="font-f1-display text-2xl md:text-3xl font-bold">
+                                    CALENDRIER <span className="text-f1-red">2026</span>
+                                </h1>
 
-                                <div className="mt-4 rounded-2xl border border-gray-700 bg-gray-900/30 p-4">
-                                    <h2 className="text-base font-extrabold text-white mb-2">Comment ça marche ?</h2>
-                                    <ul className="text-sm text-gray-200 space-y-1.5 leading-relaxed">
-                                        <li>• Clique un <b>GP</b> pour afficher ses sessions (Practice / Qualif / Race).</li>
-                                        <li>• <b>Simuler</b> lance la session et ouvre la modale de résultats.</li>
-                                        <li>• <b>Simuler next</b> lance la prochaine session non simulée.</li>
-                                        <li>• <b>Simuler tout</b> enchaîne toutes les sessions restantes.</li>
-                                        <li>• Après chaque session : points + progression stats, et le <b>Leaderboard</b> se met à jour.</li>
-                                        <li>• <b>Force</b> resimule une session même si déjà simulée (pratique pour tester).</li>
-                                        <li>• Fin de saison : <b>WDC</b> affiche le classement final.</li>
+                                <div className="mt-4 rounded-xl border border-f1-border bg-f1-dark/60 p-4">
+                                    <h2 className="font-f1-display text-sm font-bold text-f1-white mb-2 tracking-wide">
+                                        COMMENT ÇA MARCHE ?
+                                    </h2>
+                                    <ul className="text-sm text-f1-silver space-y-1.5 leading-relaxed">
+                                        <li>• Clique un <b className="text-f1-white">GP</b> pour afficher ses sessions.</li>
+                                        <li>• <b className="text-f1-white">Simuler</b> lance la session et ouvre les résultats.</li>
+                                        <li>• <b className="text-f1-white">Simuler next</b> lance la prochaine session non simulée.</li>
+                                        <li>• <b className="text-f1-white">Simuler tout</b> enchaîne toutes les sessions restantes.</li>
+                                        <li>• <b className="text-f1-white">Force</b> resimule même si déjà simulé.</li>
+                                        <li>• Fin de saison : <b className="text-f1-white">WDC</b> affiche le classement final.</li>
                                     </ul>
                                 </div>
                             </div>
 
+                            {/* Boutons simulation */}
                             <div className="flex flex-wrap gap-2 justify-start lg:justify-end">
-                                <button
+                                <Button
                                     onClick={() => simulateNext(false)}
-                                    disabled={simLoading || simAllLoading || !nextSession}
-                                    className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-xl font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                    disabled={isBusy || !nextSession}
+                                    loading={simLoading}
                                 >
-                                    {simLoading ? "Simulation..." : "Simuler next"}
-                                </button>
+                                    {simLoading ? "Simulation…" : "Simuler next"}
+                                </Button>
 
-                                <button
+                                <Button
+                                    variant="secondary"
                                     onClick={() => simulateNext(true)}
-                                    disabled={simLoading || simAllLoading || !nextSession}
-                                    className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-xl font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                    disabled={isBusy || !nextSession}
                                 >
                                     Force next
-                                </button>
+                                </Button>
 
-                                <button
+                                <Button
+                                    variant="ghost"
+                                    className="bg-emerald-900/40 hover:bg-emerald-900/60 text-emerald-300 border border-emerald-500/30"
                                     onClick={() => simulateAll(false)}
-                                    disabled={simLoading || simAllLoading || !nextSession}
-                                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-xl font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                    disabled={isBusy || !nextSession}
+                                    loading={simAllLoading}
                                 >
-                                    {simAllLoading ? `Saison... (${simAllProgress.done}/${simAllProgress.total})` : "Simuler tout"}
-                                </button>
+                                    {simAllLoading
+                                        ? `Saison… (${simAllProgress.done}/${simAllProgress.total})`
+                                        : "Simuler tout"}
+                                </Button>
 
-                                <button
+                                <Button
+                                    variant="ghost"
+                                    className="bg-emerald-950/60 hover:bg-emerald-950/80 text-emerald-400 border border-emerald-700/40"
                                     onClick={() => simulateAll(true)}
-                                    disabled={simLoading || simAllLoading || !nextSession}
-                                    className="px-4 py-2 bg-emerald-800 hover:bg-emerald-900 rounded-xl font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                    disabled={isBusy || !nextSession}
                                 >
                                     Force tout
-                                </button>
+                                </Button>
 
                                 {simAllLoading && (
-                                    <button
-                                        onClick={() => {
-                                            simAllAbortRef.current = true;
-                                        }}
-                                        className="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-xl font-semibold transition border border-gray-700"
+                                    <Button
+                                        variant="secondary"
+                                        onClick={() => { simAllAbortRef.current = true; }}
                                     >
                                         Stop
-                                    </button>
+                                    </Button>
                                 )}
                             </div>
                         </div>
 
-                        <div className="mt-4 flex flex-col gap-2">
-                            {nextSession && (
-                                <div className="text-xs text-gray-400">
-                                    Prochaine session : <b className="text-gray-200">{nextSession.gp_name}</b> • {nextSession.session_type} • index{" "}
-                                    {nextSession.index}
-                                </div>
-                            )}
-                            <div className="text-xs text-gray-500">
-                                Astuce : commence par <b>Simuler next</b>, puis utilise <b>Simuler tout</b> quand tu veux avancer vite.
+                        {nextSession && (
+                            <div className="mt-4 text-xs text-f1-muted">
+                                Prochaine session :{" "}
+                                <span className="text-f1-silver font-semibold">{nextSession.gp_name}</span>
+                                {" "}• {nextSession.session_type} • index {nextSession.index}
                             </div>
-                        </div>
-                    </div>
+                        )}
+                    </Card>
 
                     {error && (
-                        <div className="p-4 rounded-2xl bg-red-900/40 border border-red-700 text-red-200">
-                            {error}
-                        </div>
+                        <Alert type="error">{error}</Alert>
                     )}
 
-                    {/* Calendar */}
+                    {/* Calendrier */}
                     <div className="flex flex-col gap-3">
                         {loading ? (
-                            <div className="text-gray-300 px-1">Chargement…</div>
+                            <div className="flex items-center gap-3 text-f1-silver px-1">
+                                <span className="f1-spinner" /> Chargement…
+                            </div>
                         ) : gpNames.length === 0 ? (
-                            <div className="border-2 border-gray-700 rounded-2xl p-5 bg-gray-800/50 text-gray-300">
-                                Aucun GP reçu depuis l’API.
-                                <div className="text-xs text-gray-400 mt-2">
+                            <Card className="p-5 text-f1-silver">
+                                Aucun GP reçu depuis l'API.
+                                <div className="text-xs text-f1-muted mt-2">
                                     Vérifie <b>/api/season/calendar/</b>
                                 </div>
-                            </div>
+                            </Card>
                         ) : (
                             gpNames.map((gpName) => {
                                 const sessions = calendarByGp[gpName] || [];
                                 const status = gpStatus(sessions);
                                 const ui = statusUI(status);
-
                                 const gpDate = sessions?.[0]?.date ?? "—";
                                 const circuit = sessions?.[0]?.circuit_name ?? "—";
 
                                 return (
-                                    <div key={gpName} className={`border-2 rounded-2xl p-4 md:p-5 transition ${ui.card}`}>
+                                    <div
+                                        key={gpName}
+                                        className={`border-2 rounded-2xl p-4 md:p-5 transition-all ${ui.card}`}
+                                    >
                                         <div
                                             className="flex items-center justify-between gap-3 cursor-pointer"
                                             onClick={() => toggleGp(gpName)}
                                         >
                                             <div className="flex flex-col gap-1">
                                                 <div className="flex items-center gap-2">
-                                                    <span className="font-extrabold text-lg">{gpName}</span>
-                                                    <span className={`text-xs px-2 py-1 rounded-full border ${ui.pill}`}>{ui.label}</span>
+                                                    <span className="font-f1-display font-bold text-base text-f1-white">
+                                                        {gpName}
+                                                    </span>
+                                                    <span className={`text-xs px-2 py-0.5 rounded-full border ${ui.pill}`}>
+                                                        {ui.label}
+                                                    </span>
                                                 </div>
-                                                <span className="text-sm text-gray-300">
-                          {circuit} • {gpDate}
-                        </span>
+                                                <span className="text-sm text-f1-silver">
+                                                    {circuit} • {gpDate}
+                                                </span>
                                             </div>
-
-                                            <span className="text-sm text-gray-300">{expandedGp === gpName ? "▲" : "▼"}</span>
+                                            <span className="text-f1-muted text-sm">
+                                                {expandedGp === gpName ? "▲" : "▼"}
+                                            </span>
                                         </div>
 
                                         {expandedGp === gpName && (
-                                            <div className="mt-4 flex flex-col gap-2">
+                                            <div className="mt-4 flex flex-col gap-2 f1-fade-in">
                                                 {sessions.map((s) => (
                                                     <div
                                                         key={s.index}
-                                                        className="rounded-xl bg-gray-800/60 border border-gray-700 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+                                                        className="rounded-xl bg-f1-surface/60 border border-f1-border px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
                                                     >
-                                                        <div className="text-sm text-gray-200">
-                                                            <div className="font-semibold">
-                                                                {s.session_type} <span className="text-gray-400">({s.circuit_type})</span>
+                                                        <div className="text-sm">
+                                                            <div className="font-semibold text-f1-white">
+                                                                {s.session_type}{" "}
+                                                                <span className="text-f1-muted font-normal">
+                                                                    ({s.circuit_type})
+                                                                </span>
                                                             </div>
-                                                            <div className="text-gray-300 text-xs mt-1">
-                                                                Date : {s.date ?? "—"}{" "}
+                                                            <div className="text-f1-silver text-xs mt-0.5">
+                                                                {s.date ?? "—"}{" "}
                                                                 {s.is_simulated ? (
-                                                                    <span className="ml-2 text-green-400">✔ simulé</span>
+                                                                    <span className="ml-2 text-f1-green">✔ simulé</span>
                                                                 ) : (
-                                                                    <span className="ml-2 text-gray-400">non simulé</span>
+                                                                    <span className="ml-2 text-f1-muted">non simulé</span>
                                                                 )}
                                                             </div>
                                                         </div>
 
                                                         <div className="flex gap-2">
-                                                            <button
+                                                            <Button
+                                                                size="sm"
                                                                 onClick={() => simulateOne(s.index, false, s)}
-                                                                disabled={simLoading || simAllLoading}
-                                                                className="px-3.5 py-2 bg-red-600 hover:bg-red-700 rounded-xl font-semibold transition disabled:opacity-50"
+                                                                disabled={isBusy}
                                                             >
                                                                 Simuler
-                                                            </button>
-                                                            <button
+                                                            </Button>
+                                                            <Button
+                                                                size="sm"
+                                                                variant="secondary"
                                                                 onClick={() => simulateOne(s.index, true, s)}
-                                                                disabled={simLoading || simAllLoading}
-                                                                className="px-3.5 py-2 bg-gray-700 hover:bg-gray-600 rounded-xl font-semibold transition disabled:opacity-50"
+                                                                disabled={isBusy}
                                                             >
                                                                 Force
-                                                            </button>
+                                                            </Button>
                                                         </div>
                                                     </div>
                                                 ))}
@@ -585,25 +589,29 @@ export default function StartSeason() {
                         )}
                     </div>
 
-                    {/* Last results */}
+                    {/* Dernière session */}
                     {lastResults.length > 0 && (
-                        <div className="bg-gray-800 border border-gray-700 rounded-2xl p-5 md:p-6">
-                            <h2 className="font-extrabold text-lg text-red-400 mb-4">Dernière session</h2>
+                        <Card className="p-5 md:p-6">
+                            <h2 className="font-f1-display text-sm font-bold tracking-widest text-f1-red uppercase mb-4">
+                                Dernière session
+                            </h2>
 
-                            <div className="mb-4 rounded-2xl bg-gray-900/50 border border-gray-700 p-4">
-                                <div className="text-xs text-gray-400 mb-3">Stats pilote</div>
+                            <div className="mb-4 rounded-xl bg-f1-dark/60 border border-f1-border p-4">
+                                <div className="f1-label mb-3">Stats pilote</div>
                                 <StatsGrid stats={playerStats} prevStats={prevPlayerStats} />
                             </div>
 
                             {playerLast && (
-                                <div className="mb-4 rounded-2xl bg-gray-900/50 border border-gray-700 p-4">
-                                    <div className="text-xs text-gray-400">Ton résultat</div>
-                                    <div className="mt-2 flex justify-between text-sm">
-                    <span className="font-semibold">
-                      {playerLast.position ? `${playerLast.position}. ` : ""}
-                        {playerLast.name} {playerLast.surname}
-                    </span>
-                                        <span className="text-gray-300">+{playerLast.points_gained} pts</span>
+                                <div className="mb-4 rounded-xl bg-f1-dark/60 border border-f1-border p-4">
+                                    <div className="f1-label mb-2">Ton résultat</div>
+                                    <div className="flex justify-between text-sm">
+                                        <span className="font-semibold text-f1-white">
+                                            {playerLast.position ? `${playerLast.position}. ` : ""}
+                                            {playerLast.name} {playerLast.surname}
+                                        </span>
+                                        <span className="font-f1-display text-f1-yellow">
+                                            +{playerLast.points_gained} pts
+                                        </span>
                                     </div>
                                 </div>
                             )}
@@ -612,50 +620,53 @@ export default function StartSeason() {
                                 {lastResults.slice(0, 10).map((r) => (
                                     <div
                                         key={`${r.position}-${r.surname}-${r.number}`}
-                                        className="flex justify-between text-sm rounded-xl bg-gray-900/30 border border-gray-800 px-3 py-2"
+                                        className="flex justify-between text-sm rounded-xl bg-f1-dark/50 border border-f1-border px-3 py-2"
                                     >
-                    <span>
-                      {r.position ? `${r.position}. ` : ""}
-                        {r.name} {r.surname} <span className="text-gray-400">({r.team})</span>
-                    </span>
-                                        <span className="text-gray-300">+{r.points_gained} pts</span>
+                                        <span className="text-f1-silver">
+                                            {r.position ? `${r.position}. ` : ""}
+                                            <span className="text-f1-white font-medium">{r.name} {r.surname}</span>{" "}
+                                            <span className="text-f1-muted">({r.team})</span>
+                                        </span>
+                                        <span className="font-f1-display text-f1-silver">+{r.points_gained}</span>
                                     </div>
                                 ))}
                             </div>
-                        </div>
+                        </Card>
                     )}
                 </section>
 
                 {/* RIGHT */}
-                <aside className="w-full lg:w-[360px] flex flex-col gap-6 lg:sticky lg:top-6 h-fit">
-                    <div className={`bg-gray-800 border-2 rounded-2xl p-5 md:p-6 shadow-lg flex flex-col items-center gap-3 ${teamBorder}`}>
-                        <button
+                <aside className="w-full lg:w-[360px] flex flex-col gap-5 lg:sticky lg:top-6 h-fit">
+                    {/* Carte pilote/team */}
+                    <div className={`bg-f1-surface border-2 rounded-2xl p-5 md:p-6 shadow-lg flex flex-col items-center gap-4 ${teamBorder}`}>
+                        <Button
+                            variant="secondary"
+                            fullWidth
+                            disabled={isBusy}
                             onClick={() => {
                                 setDriver(null);
                                 setTeam(null);
                                 navigate("/choose-team");
                             }}
-                            disabled={simLoading || simAllLoading}
-                            className="w-full px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-xl font-semibold transition border border-gray-700 disabled:opacity-50"
                         >
                             Refaire les choix
-                        </button>
+                        </Button>
 
                         <img
                             src={driverImgSrc(driver)}
                             alt={`${driver.name} ${driver.surname}`}
-                            className="h-28 w-28 rounded-full border-2 border-red-500 object-cover object-top"
+                            className="h-28 w-28 rounded-full border-2 border-f1-red object-cover object-top"
                             onError={(e) => e.currentTarget.remove()}
                         />
 
                         <div className="text-center">
-                            <div className="font-extrabold text-lg">
+                            <div className="font-f1-display font-bold text-base text-f1-white">
                                 {driver.name} {driver.surname}
                             </div>
-                            <div className="text-sm text-gray-300">#{driver.number}</div>
+                            <div className="font-f1-display text-f1-red text-sm mt-0.5">#{driver.number}</div>
                         </div>
 
-                        <div className="flex items-center gap-2 text-sm text-gray-300">
+                        <div className="flex items-center gap-2 text-sm text-f1-silver">
                             <img
                                 src={teamLogoSrc(team.name)}
                                 alt={team.name}
@@ -665,65 +676,79 @@ export default function StartSeason() {
                             <span>{team.name}</span>
                         </div>
 
-                        <div className="mt-2 w-full rounded-2xl bg-gray-900/50 border border-gray-700 p-4 text-center">
-                            <div className="text-xs text-gray-400">Points</div>
-                            <div className="text-3xl font-black text-white mt-1">{playerPoints}</div>
+                        <div className="w-full rounded-xl bg-f1-dark/60 border border-f1-border p-4 text-center">
+                            <div className="f1-label">Points</div>
+                            <div className="font-f1-display text-4xl font-black text-f1-white mt-1">
+                                {playerPoints}
+                            </div>
                         </div>
 
-                        <div className="w-full rounded-2xl bg-gray-900/50 border border-gray-700 p-4">
-                            <div className="text-xs text-gray-400 mb-3">Stats pilote</div>
+                        <div className="w-full rounded-xl bg-f1-dark/60 border border-f1-border p-4">
+                            <div className="f1-label mb-3">Stats pilote</div>
                             <StatsGrid stats={playerStats} prevStats={prevPlayerStats} />
                         </div>
 
-                        <button
+                        <Button
+                            variant="secondary"
+                            fullWidth
+                            disabled={isBusy}
                             onClick={resetSeason}
-                            disabled={simLoading || simAllLoading}
-                            className="w-full px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-xl font-semibold transition disabled:opacity-50"
                         >
                             Reset saison
-                        </button>
+                        </Button>
                     </div>
 
-                    <div className="bg-gray-800 border-2 border-gray-700 rounded-2xl p-5 md:p-6 shadow-lg">
+                    {/* Leaderboard */}
+                    <Card className="p-5 md:p-6 shadow-lg">
                         <div className="flex items-center justify-between mb-4">
-                            <h2 className="font-extrabold text-lg text-red-500">Leaderboard</h2>
-                            <button
-                                onClick={openWdc}
+                            <h2 className="font-f1-display text-sm font-bold tracking-widest text-f1-red uppercase">
+                                Leaderboard
+                            </h2>
+                            <Button
+                                variant="secondary"
+                                size="sm"
+                                loading={wdcLoading}
                                 disabled={wdcLoading}
-                                className="text-xs px-3 py-1.5 rounded-xl bg-gray-700 hover:bg-gray-600 font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                onClick={openWdc}
                             >
-                                {wdcLoading && (
-                                    <span className="h-3.5 w-3.5 rounded-full border-2 border-white/60 border-t-transparent animate-spin" />
-                                )}
                                 WDC
-                            </button>
+                            </Button>
                         </div>
 
                         {loading ? (
-                            <div className="text-gray-300">Chargement…</div>
+                            <div className="flex items-center gap-2 text-f1-silver text-sm">
+                                <span className="f1-spinner" /> Chargement…
+                            </div>
                         ) : driversBoard.length === 0 ? (
-                            <div className="text-gray-300">Aucun pilote dans le classement.</div>
+                            <div className="text-f1-silver text-sm">Aucun pilote dans le classement.</div>
                         ) : (
-                            <div className="flex flex-col gap-2">
+                            <div className="flex flex-col gap-1.5">
                                 {driversBoard.map((d, idx) => {
                                     const isPlayer = isSameDriver(d, driver);
                                     return (
                                         <div
                                             key={`${d.surname}_${d.number}`}
-                                            className={`flex justify-between px-3 py-2 rounded-xl border ${
-                                                isPlayer ? "bg-gray-700 border-gray-600 font-semibold" : "bg-gray-900/30 border-gray-800"
-                                            }`}
+                                            className={[
+                                                "flex justify-between px-3 py-2 rounded-xl border text-sm",
+                                                isPlayer
+                                                    ? "bg-f1-surface-2 border-f1-muted font-semibold text-f1-white"
+                                                    : "bg-f1-dark/40 border-f1-border text-f1-silver",
+                                            ].join(" ")}
                                         >
-                      <span className="text-sm">
-                        {idx + 1}. {d.name} {d.surname} <span className="text-gray-400">({d.team})</span>
-                      </span>
-                                            <span className="text-sm">{d.points} pts</span>
+                                            <span>
+                                                {idx + 1}.{" "}
+                                                <span className={isPlayer ? "text-f1-white" : "text-f1-silver"}>
+                                                    {d.name} {d.surname}
+                                                </span>{" "}
+                                                <span className="text-f1-muted">({d.team})</span>
+                                            </span>
+                                            <span className="font-f1-display">{d.points}</span>
                                         </div>
                                     );
                                 })}
                             </div>
                         )}
-                    </div>
+                    </Card>
                 </aside>
             </main>
 

@@ -1,10 +1,12 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useGame } from "../context/GameContext";
 import Header from "../components/Header.jsx";
 import TeamCard from "../components/TeamCard.jsx";
 import { apiFetch } from "../services/api.js";
 import { TEAM_EXTRA } from "../data/teamExtra.js";
+import Button from "../components/ui/Button";
+import Card from "../components/ui/Card";
 
 const norm = (s) => String(s ?? "").trim().toLowerCase();
 
@@ -36,7 +38,6 @@ export default function ChooseTeam() {
         load();
     }, []);
 
-    // drivers par team (robuste)
     const driversByTeam = useMemo(() => {
         const map = new Map();
         for (const d of drivers) {
@@ -49,33 +50,32 @@ export default function ChooseTeam() {
     }, [drivers]);
 
     const teamsUI = useMemo(() => {
-        return teams.map((t) => {
-            const extra = TEAM_EXTRA[t.name] || null;
-            return {
-                ...t,
-                _drivers: driversByTeam.get(norm(t.name)) || [],
-                _extra: extra,
-            };
-        });
+        return teams.map((t) => ({
+            ...t,
+            _drivers: driversByTeam.get(norm(t.name)) || [],
+            _extra: TEAM_EXTRA[t.name] || null,
+        }));
     }, [teams, driversByTeam]);
 
     const handleSelect = (team) => {
         setSelectedTeamLocal(team);
-        setTeam(team); // on garde la team API dans le context (ça va)
+        setTeam(team);
     };
 
     const handleRandom = () => {
         if (!teamsUI.length) return;
-        const randomTeam = teamsUI[Math.floor(Math.random() * teamsUI.length)];
-        handleSelect(randomTeam);
+        handleSelect(teamsUI[Math.floor(Math.random() * teamsUI.length)]);
     };
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-gray-900 text-white flex flex-col">
+            <div className="min-h-screen bg-f1-dark text-f1-white flex flex-col">
                 <Header userName={userName} />
-                <main className="flex-1 p-6">
-                    <div className="text-lg">Chargement des teams…</div>
+                <main className="flex-1 p-6 flex items-center justify-center">
+                    <div className="flex items-center gap-3 text-f1-silver">
+                        <span className="f1-spinner" />
+                        Chargement des teams…
+                    </div>
                 </main>
             </div>
         );
@@ -85,17 +85,20 @@ export default function ChooseTeam() {
     const extra = selectedTeam?._extra || null;
 
     return (
-        <div className="min-h-screen bg-gray-900 text-white flex flex-col">
+        <div className="min-h-screen bg-f1-dark text-f1-white flex flex-col">
             <Header userName={userName} />
 
-            <main className="flex-1 p-6 flex flex-col lg:flex-row gap-6">
+            <main className="flex-1 p-6 flex flex-col lg:flex-row gap-6 f1-fade-in">
                 {/* GAUCHE */}
                 <div className="flex-1">
-                    <h1 className="text-4xl font-extrabold mb-2">Bienvenue {userName}, choisis ta team</h1>
-                    <p className="text-sm text-gray-300 mb-6">Clique sur une team pour la sélectionner, puis continue.</p>
+                    <h1 className="font-f1-display text-3xl font-bold mb-1">
+                        CHOISIS TA <span className="text-f1-red">TEAM</span>
+                    </h1>
+                    <p className="text-sm text-f1-silver mb-6">
+                        Bienvenue {userName} — sélectionne une écurie pour continuer.
+                    </p>
 
-                    {/* Grille */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 items-start">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 items-start">
                         {teamsUI.map((team) => (
                             <TeamCard
                                 key={team.id ?? team.name}
@@ -110,101 +113,96 @@ export default function ChooseTeam() {
                 </div>
 
                 {/* DROITE */}
-                <div className="w-full lg:w-80 h-fit bg-gray-800 border border-gray-600 rounded-2xl p-5 shadow-lg flex flex-col gap-4">
-                    <h2 className="text-lg font-bold text-white">
-                        {selectedTeam ? `Team: ${selectedTeam.name}` : "Aucune team"}
+                <Card stripe className="w-full lg:w-80 h-fit p-5 flex flex-col gap-4 shadow-lg">
+                    <h2 className="font-f1-display text-sm font-bold tracking-widest text-f1-silver uppercase">
+                        {selectedTeam ? selectedTeam.name : "Aucune team"}
                     </h2>
 
-                    {/* Résumé team */}
-                    <div className="rounded-xl bg-gray-900/50 border border-gray-700 p-4 text-sm text-gray-200">
+                    {/* Résumé */}
+                    <div className="rounded-xl bg-f1-dark/60 border border-f1-border p-4 text-sm">
                         {selectedTeam ? (
                             extra ? (
                                 <div className="flex flex-col gap-2">
                                     <div className="flex justify-between">
-                                        <span className="text-gray-400">Création</span>
-                                        <span className="font-semibold">{extra.founded ?? "—"}</span>
+                                        <span className="text-f1-muted">Création</span>
+                                        <span className="font-semibold text-f1-white">{extra.founded ?? "—"}</span>
                                     </div>
                                     <div className="flex justify-between">
-                                        <span className="text-gray-400">Base</span>
-                                        <span className="font-semibold">{extra.base ?? "—"}</span>
+                                        <span className="text-f1-muted">Base</span>
+                                        <span className="font-semibold text-f1-white">{extra.base ?? "—"}</span>
                                     </div>
                                     <div className="flex justify-between">
-                                        <span className="text-gray-400">Team principal</span>
-                                        <span className="font-semibold">{extra.principal ?? "—"}</span>
+                                        <span className="text-f1-muted">Team principal</span>
+                                        <span className="font-semibold text-f1-white text-right">{extra.principal ?? "—"}</span>
                                     </div>
                                     <div className="flex justify-between">
-                                        <span className="text-gray-400">Power Unit</span>
-                                        <span className="font-semibold">{extra.powerUnit ?? "—"}</span>
+                                        <span className="text-f1-muted">Power Unit</span>
+                                        <span className="font-semibold text-f1-white">{extra.powerUnit ?? "—"}</span>
                                     </div>
 
                                     <div className="mt-2 grid grid-cols-2 gap-2">
-                                        <div className="rounded-xl border border-gray-700 bg-gray-900/30 p-2">
-                                            <div className="text-[11px] text-gray-400">Titres Constructeurs</div>
-                                            <div className="text-lg font-black">{extra.constructorTitles ?? 0}</div>
+                                        <div className="rounded-xl border border-f1-border bg-f1-dark/60 p-2 text-center">
+                                            <div className="text-[11px] text-f1-muted">Titres Constructeurs</div>
+                                            <div className="font-f1-display text-lg font-black text-f1-white">{extra.constructorTitles ?? 0}</div>
                                         </div>
-                                        <div className="rounded-xl border border-gray-700 bg-gray-900/30 p-2">
-                                            <div className="text-[11px] text-gray-400">Titres Pilotes</div>
-                                            <div className="text-lg font-black">{extra.driverTitles ?? 0}</div>
+                                        <div className="rounded-xl border border-f1-border bg-f1-dark/60 p-2 text-center">
+                                            <div className="text-[11px] text-f1-muted">Titres Pilotes</div>
+                                            <div className="font-f1-display text-lg font-black text-f1-white">{extra.driverTitles ?? 0}</div>
                                         </div>
                                     </div>
 
                                     {extra.highlight && (
-                                        <div className="mt-2 rounded-xl border border-gray-700 bg-gray-900/30 p-3">
-                                            <div className="text-[11px] text-gray-400 mb-1">À retenir</div>
-                                            <div className="text-sm">{extra.highlight}</div>
+                                        <div className="mt-2 rounded-xl border border-f1-border bg-f1-dark/60 p-3">
+                                            <div className="text-[11px] text-f1-muted mb-1">À retenir</div>
+                                            <div className="text-sm text-f1-silver">{extra.highlight}</div>
                                         </div>
                                     )}
                                 </div>
                             ) : (
-                                <div className="text-gray-300">
-                                    Pas d’infos manuelles pour cette team (ajoute-la dans <b>teamExtra.js</b>).
+                                <div className="text-f1-silver">
+                                    Pas d'infos manuelles pour cette team (ajoute-la dans <b>teamExtra.js</b>).
                                 </div>
                             )
                         ) : (
-                            "Sélectionne une team pour voir les détails."
+                            <span className="text-f1-muted">Sélectionne une team pour voir les détails.</span>
                         )}
                     </div>
 
                     {/* Pilotes */}
-                    <div className="rounded-xl bg-gray-900/50 border border-gray-700 p-4 text-sm text-gray-200">
+                    <div className="rounded-xl bg-f1-dark/60 border border-f1-border p-4 text-sm">
                         {selectedTeam ? (
                             selectedDrivers.length ? (
                                 <>
-                                    <div className="text-gray-300 mb-2">Pilotes :</div>
+                                    <div className="f1-label mb-2">Pilotes</div>
                                     <div className="flex flex-col gap-2">
                                         {selectedDrivers.map((d) => (
                                             <div key={`${d.surname}_${d.number}`} className="flex justify-between">
-                        <span className="font-semibold">
-                          {d.name} {d.surname}
-                        </span>
-                                                <span className="text-gray-300">#{d.number}</span>
+                                                <span className="font-semibold text-f1-white">{d.name} {d.surname}</span>
+                                                <span className="font-f1-display text-f1-silver">#{d.number}</span>
                                             </div>
                                         ))}
                                     </div>
                                 </>
                             ) : (
-                                "Pilotes : —"
+                                <span className="text-f1-muted">Pilotes : —</span>
                             )
                         ) : (
-                            "Sélectionne une team pour voir les détails."
+                            <span className="text-f1-muted">Sélectionne une team pour voir les détails.</span>
                         )}
                     </div>
 
-                    <button
+                    <Button
                         onClick={() => navigate("/choose-driver")}
-                        className="px-4 py-3 bg-red-600 text-white rounded-xl font-black hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
                         disabled={!selectedTeam}
+                        fullWidth
                     >
                         CONTINUER
-                    </button>
+                    </Button>
 
-                    <button
-                        onClick={handleRandom}
-                        className="mt-auto px-4 py-3 bg-yellow-500 text-black rounded-xl font-bold hover:bg-yellow-600 transition"
-                    >
+                    <Button variant="outline" onClick={handleRandom} fullWidth>
                         Team aléatoire
-                    </button>
-                </div>
+                    </Button>
+                </Card>
             </main>
         </div>
     );

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { apiFetch } from "../services/api";
 import { useGame } from "../context/GameContext";
 
@@ -24,14 +24,12 @@ export default function AvatarPicker() {
                 method: "POST",
                 body: JSON.stringify({ avatar_key: key }),
             });
-
-            // on force la clé, on s’en fiche de l’URL backend
             if (typeof applyAvatar === "function") {
                 applyAvatar({ avatar_key: res?.avatar_key || key });
             }
         } catch (e) {
             console.error("Avatar change failed", e);
-            alert("Impossible de changer l’avatar.");
+            alert("Impossible de changer l'avatar.");
         }
     }
 
@@ -45,7 +43,7 @@ export default function AvatarPicker() {
                         key={key}
                         type="button"
                         onClick={() => choose(key)}
-                        className="rounded-xl border border-gray-700 bg-gray-900/40 hover:bg-gray-800/60 p-2 transition"
+                        className="rounded-xl border border-f1-border bg-f1-surface-2/60 hover:bg-f1-surface hover:border-f1-red/40 p-2 transition-all duration-150"
                         title={key}
                     >
                         {!isBroken && (
@@ -62,8 +60,7 @@ export default function AvatarPicker() {
                                 }}
                             />
                         )}
-
-                        <div className="mt-1 text-[11px] text-center text-gray-300">{key}</div>
+                        <div className="mt-1 text-[11px] text-center text-f1-silver capitalize">{key}</div>
                     </button>
                 );
             })}

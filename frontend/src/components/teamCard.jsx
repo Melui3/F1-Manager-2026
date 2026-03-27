@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import { useState } from "react";
+import Button from "./ui/Button";
 
 const TEAM_KEY_MAP = {
     "Oracle Red Bull Racing": "redbull",
@@ -30,17 +31,17 @@ const TEAM_STYLE = {
 
 function Badge({ children }) {
     return (
-        <span className="text-[11px] px-2 py-1 rounded-full border border-gray-600 bg-gray-900/30 text-gray-200">
-      {children}
-    </span>
+        <span className="text-[11px] px-2 py-0.5 rounded-full border border-f1-border bg-f1-dark/60 text-f1-silver">
+            {children}
+        </span>
     );
 }
 
 function Row({ label, value }) {
     return (
         <div className="flex justify-between gap-3">
-            <span className="text-gray-400">{label}</span>
-            <span className="font-semibold text-right text-gray-200">{value ?? "—"}</span>
+            <span className="text-f1-muted">{label}</span>
+            <span className="font-semibold text-right text-f1-white">{value ?? "—"}</span>
         </div>
     );
 }
@@ -51,10 +52,7 @@ export default function TeamCard({ team, isSelected, onSelect, drivers = [], ext
 
     const teamName = team?.name ?? "Team";
     const teamKey = TEAM_KEY_MAP[teamName] || team?.team_key || null;
-
-    const style = TEAM_STYLE[teamName] || "border-gray-700 shadow-black/0";
-
-    // ✅ GH Pages safe + ✅ no default image
+    const style = TEAM_STYLE[teamName] || "border-f1-border shadow-black/0";
     const logoSrc = teamKey ? `${base}teams/${teamKey}.avif` : null;
 
     const shortName = extra?.shortName ?? teamName;
@@ -64,12 +62,15 @@ export default function TeamCard({ team, isSelected, onSelect, drivers = [], ext
     return (
         <div
             onClick={onSelect}
-            className={`rounded-2xl overflow-hidden border-2 bg-gray-800 cursor-pointer transition-all
-        ${isSelected ? `${style} shadow-2xl bg-gray-700/70` : "border-gray-700 hover:shadow-lg hover:border-gray-500"}
-      `}
+            className={[
+                "rounded-2xl overflow-hidden border-2 bg-f1-surface cursor-pointer transition-all duration-200",
+                isSelected
+                    ? `${style} shadow-2xl bg-f1-surface-2`
+                    : "border-f1-border hover:shadow-lg hover:border-f1-muted",
+            ].join(" ")}
         >
-            {/* header */}
-            <div className="w-full h-32 bg-gray-900 flex items-center justify-center">
+            {/* Logo header */}
+            <div className="w-full h-32 bg-f1-dark flex items-center justify-center">
                 {logoSrc ? (
                     <img
                         src={logoSrc}
@@ -78,40 +79,44 @@ export default function TeamCard({ team, isSelected, onSelect, drivers = [], ext
                         onError={(e) => e.currentTarget.remove()}
                     />
                 ) : (
-                    <div className="text-xs text-gray-500">Logo non disponible</div>
+                    <div className="text-xs text-f1-muted">Logo non disponible</div>
                 )}
             </div>
 
             <div className="p-4">
-                <div className="text-white font-extrabold uppercase text-lg leading-tight">{shortName}</div>
+                <div className="font-f1-display font-bold uppercase text-base leading-tight text-f1-white">
+                    {shortName}
+                </div>
 
-                <div className="mt-2 flex flex-wrap gap-2">
+                <div className="mt-2 flex flex-wrap gap-1.5">
                     <Badge>Drivers: {drivers.length}</Badge>
                     <Badge>CSTR: {cstr}</Badge>
                     <Badge>Debut: {debut}</Badge>
                 </div>
 
                 {extra?.highlight && (
-                    <div className="mt-3 text-sm text-gray-200 leading-snug">
-                        <span className="text-gray-400">À retenir : </span>
+                    <div className="mt-3 text-sm text-f1-silver leading-snug">
+                        <span className="text-f1-muted">À retenir : </span>
                         {extra.highlight}
                     </div>
                 )}
 
-                <button
-                    type="button"
-                    className="mt-4 w-full rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold py-2 transition"
+                <Button
+                    variant="secondary"
+                    size="sm"
+                    fullWidth
+                    className="mt-4"
                     onClick={(e) => {
                         e.stopPropagation();
                         setOpen((v) => !v);
                     }}
                 >
                     {open ? "Masquer détails" : "Afficher détails"}
-                </button>
+                </Button>
 
                 {open && (
-                    <div className="mt-3 rounded-xl bg-gray-900 border border-gray-700 p-3">
-                        <div className="text-xs text-gray-400 mb-2">Infos team</div>
+                    <div className="mt-3 rounded-xl bg-f1-dark border border-f1-border p-3 f1-fade-in">
+                        <div className="f1-label mb-2">Infos team</div>
 
                         {extra ? (
                             <div className="flex flex-col gap-1.5 text-sm">
@@ -124,9 +129,9 @@ export default function TeamCard({ team, isSelected, onSelect, drivers = [], ext
                                 <Row label="Titres pilotes" value={extra.driverTitles ?? 0} />
 
                                 {Array.isArray(extra.notes) && extra.notes.length > 0 && (
-                                    <div className="mt-2 rounded-xl border border-gray-800 bg-gray-900/40 p-3">
-                                        <div className="text-xs text-gray-400 mb-1">Notes</div>
-                                        <ul className="list-disc pl-5 text-gray-300 text-sm space-y-1">
+                                    <div className="mt-2 rounded-xl border border-f1-border bg-f1-surface-2/40 p-3">
+                                        <div className="f1-label mb-1">Notes</div>
+                                        <ul className="list-disc pl-5 text-f1-silver text-sm space-y-1">
                                             {extra.notes.map((n, i) => (
                                                 <li key={i}>{n}</li>
                                             ))}
@@ -135,29 +140,29 @@ export default function TeamCard({ team, isSelected, onSelect, drivers = [], ext
                                 )}
                             </div>
                         ) : (
-                            <div className="text-sm text-gray-300">
-                                Pas d’infos manuelles pour cette team. (Ajoute-la dans <b>teamExtra.js</b>)
+                            <div className="text-sm text-f1-silver">
+                                Pas d'infos manuelles pour cette team. (Ajoute-la dans <b>teamExtra.js</b>)
                             </div>
                         )}
 
-                        <div className="mt-3 text-xs text-gray-400 mb-2">Pilotes disponibles</div>
+                        <div className="f1-label mt-3 mb-2">Pilotes disponibles</div>
 
                         {drivers.length ? (
-                            <div className="flex flex-col gap-2">
+                            <div className="flex flex-col gap-1.5">
                                 {drivers.map((d) => (
                                     <div
                                         key={`${d.surname}_${d.number}`}
-                                        className="flex items-center justify-between rounded-lg bg-gray-800 border border-gray-700 px-3 py-2"
+                                        className="flex items-center justify-between rounded-lg bg-f1-surface border border-f1-border px-3 py-2"
                                     >
-                                        <div className="text-sm text-white font-semibold">
+                                        <div className="text-sm text-f1-white font-semibold">
                                             {d.name} {d.surname}
                                         </div>
-                                        <div className="text-sm text-gray-300">#{d.number}</div>
+                                        <div className="text-sm text-f1-silver font-f1-display">#{d.number}</div>
                                     </div>
                                 ))}
                             </div>
                         ) : (
-                            <div className="text-sm text-gray-300">Aucun pilote</div>
+                            <div className="text-sm text-f1-silver">Aucun pilote</div>
                         )}
                     </div>
                 )}

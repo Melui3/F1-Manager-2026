@@ -1,9 +1,11 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useGame } from "../context/GameContext";
 import Header from "../components/Header.jsx";
 import DriverCard from "../components/DriverCard";
 import { apiFetch } from "../services/api";
+import Button from "../components/ui/Button";
+import Card from "../components/ui/Card";
 
 const norm = (s) => String(s ?? "").trim().toLowerCase();
 
@@ -31,12 +33,11 @@ export default function ChooseDriver() {
         load();
     }, []);
 
-    // ✅ Si pas de team -> retourne choisir une team
+    // Si pas de team -> retour
     useEffect(() => {
         if (!team) navigate("/choose-team", { replace: true });
     }, [team, navigate]);
 
-    // ✅ Filtre robuste
     const teamDrivers = useMemo(() => {
         if (!team || !Array.isArray(drivers)) return [];
 
@@ -45,80 +46,85 @@ export default function ChooseDriver() {
 
         return drivers.filter((d) => {
             const t = d.team;
-
             if (t && typeof t === "object") {
                 if (t.id != null && teamId != null) return t.id === teamId;
                 if (t.name) return norm(t.name) === teamNameKey;
             }
-
             if (typeof t === "string") return norm(t) === teamNameKey;
             if (typeof t === "number") return teamId != null && t === teamId;
-
             if (d.team_id != null && teamId != null) return d.team_id === teamId;
             if (d.team_name != null) return norm(d.team_name) === teamNameKey;
-
             return false;
         });
     }, [team, drivers]);
 
     const handleSelect = (d) => {
         setSelectedDriverLocal(d);
-        setDriver(d); // persist via context + localStorage
+        setDriver(d);
     };
 
     const handleRandom = () => {
         if (!teamDrivers.length) return;
-        const randomDriver = teamDrivers[Math.floor(Math.random() * teamDrivers.length)];
-        handleSelect(randomDriver);
+        handleSelect(teamDrivers[Math.floor(Math.random() * teamDrivers.length)]);
     };
 
-    // ✅ rendu minimal si team pas encore dispo
     if (!team) {
         return (
-            <div className="min-h-screen bg-gray-900 text-white flex flex-col">
+            <div className="min-h-screen bg-f1-dark text-f1-white flex flex-col">
                 <Header userName={userName} />
                 <main className="flex-1 p-6 flex items-center justify-center">
-                    <div className="text-center text-gray-300">Redirection…</div>
+                    <div className="text-f1-silver">Redirection…</div>
                 </main>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-gray-900 text-white flex flex-col">
+        <div className="min-h-screen bg-f1-dark text-f1-white flex flex-col">
             <Header userName={userName} />
 
-            <main className="flex-1 p-6 flex flex-col lg:flex-row gap-6">
+            <main className="flex-1 p-6 flex flex-col lg:flex-row gap-6 f1-fade-in">
                 {/* GAUCHE */}
                 <div className="flex-1">
-                    <h1 className="text-4xl font-extrabold mb-2">Choisis ton pilote pour {team.name}</h1>
-                    <p className="text-sm text-gray-300 mb-6">Clique sur un pilote pour le sélectionner, puis continue.</p>
+                    <h1 className="font-f1-display text-3xl font-bold mb-1">
+                        CHOISIS TON <span className="text-f1-red">PILOTE</span>
+                    </h1>
+                    <p className="text-sm text-f1-silver mb-4">
+                        {team.name} — sélectionne un pilote pour continuer.
+                    </p>
 
-                    <button
+                    <Button
+                        variant="secondary"
+                        size="sm"
+                        className="mb-6"
                         onClick={() => {
                             setSelectedDriverLocal(null);
                             setDriver(null);
                             navigate("/choose-team");
                         }}
-                        className="px-4 py-2 rounded-xl bg-gray-800 border border-gray-700 text-gray-200 hover:bg-gray-700 transition font-semibold"
                     >
                         ← Retour teams
-                    </button>
+                    </Button>
 
                     {loading ? (
-                        <div className="text-gray-300 mt-4">Chargement des pilotes…</div>
+                        <div className="flex items-center gap-3 text-f1-silver">
+                            <span className="f1-spinner" />
+                            Chargement des pilotes…
+                        </div>
                     ) : teamDrivers.length === 0 ? (
-                        <div className="text-gray-300 mt-4">
+                        <div className="text-f1-silver">
                             Aucun pilote trouvé pour cette team. (Vérifie le champ team côté API)
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 items-start mt-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5 items-start">
                             {teamDrivers.map((d) => (
                                 <DriverCard
                                     key={`${d.surname}_${d.number}`}
                                     driver={d}
                                     isSelected={
-                                        selectedDriver ? selectedDriver.number === d.number && selectedDriver.surname === d.surname : false
+                                        selectedDriver
+                                            ? selectedDriver.number === d.number && selectedDriver.surname === d.surname
+                                            : false
                                     }
                                     onSelect={() => handleSelect(d)}
                                 />
@@ -128,44 +134,48 @@ export default function ChooseDriver() {
                 </div>
 
                 {/* DROITE */}
-                <div className="w-full lg:w-80 h-fit bg-gray-800 border border-gray-600 rounded-2xl p-5 shadow-lg flex flex-col gap-4">
-                    <h2 className="text-lg font-bold text-white">
-                        {selectedDriver ? `Pilote : ${selectedDriver.name} ${selectedDriver.surname}` : "Aucun pilote"}
+                <Card stripe className="w-full lg:w-80 h-fit p-5 flex flex-col gap-4 shadow-lg">
+                    <h2 className="font-f1-display text-sm font-bold tracking-widest text-f1-silver uppercase">
+                        {selectedDriver
+                            ? `${selectedDriver.name} ${selectedDriver.surname}`
+                            : "Aucun pilote"}
                     </h2>
 
-                    <div className="rounded-xl bg-gray-900/50 border border-gray-700 p-4 text-sm text-gray-200">
-                        <div className="text-gray-300 mb-2">Team :</div>
-                        <div className="font-semibold">{team.name}</div>
+                    <div className="rounded-xl bg-f1-dark/60 border border-f1-border p-4 text-sm">
+                        <div className="f1-label mb-1">Team</div>
+                        <div className="font-semibold text-f1-white">{team.name}</div>
 
                         {selectedDriver && (
-                            <div className="mt-3 text-gray-300">
-                                <div>
-                                    Pays : <b className="text-white">{selectedDriver.country}</b>
+                            <div className="mt-3 flex flex-col gap-1.5">
+                                <div className="flex justify-between">
+                                    <span className="text-f1-muted">Pays</span>
+                                    <span className="font-semibold text-f1-white">{selectedDriver.country}</span>
                                 </div>
-                                <div>
-                                    Numéro : <b className="text-white">#{selectedDriver.number}</b>
+                                <div className="flex justify-between">
+                                    <span className="text-f1-muted">Numéro</span>
+                                    <span className="font-f1-display font-bold text-f1-white">#{selectedDriver.number}</span>
                                 </div>
                             </div>
                         )}
                     </div>
 
-                    {/* ✅ ICI le fix: /start-season */}
-                    <button
+                    <Button
                         onClick={() => navigate("/start-season")}
-                        className="px-4 py-3 bg-red-600 text-white rounded-xl font-black hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
                         disabled={!selectedDriver}
+                        fullWidth
                     >
                         CONTINUER
-                    </button>
+                    </Button>
 
-                    <button
+                    <Button
+                        variant="outline"
                         onClick={handleRandom}
-                        className="mt-auto px-4 py-3 bg-yellow-500 text-black rounded-xl font-bold hover:bg-yellow-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
                         disabled={!teamDrivers.length}
+                        fullWidth
                     >
                         Pilote aléatoire
-                    </button>
-                </div>
+                    </Button>
+                </Card>
             </main>
         </div>
     );

@@ -1,1 +1,153 @@
+/* ── Google Fonts : Titillium Web (body) + Orbitron (display/stats) ── */
+@import url("https://fonts.googleapis.com/css2?family=Titillium+Web:ital,wght@0,300;0,400;0,600;0,700;0,900;1,400&family=Orbitron:wght@400;600;700;900&display=swap");
+
 @import "tailwindcss";
+
+/* ── Design tokens F1 ─────────────────────────────────────────────── */
+@theme {
+  /* Couleurs F1 */
+  --color-f1-red:       #e10600;
+  --color-f1-red-dark:  #c00400;
+  --color-f1-red-light: #ff3022;
+  --color-f1-dark:      #15151e;
+  --color-f1-surface:   #1e1e2e;
+  --color-f1-surface-2: #26263a;
+  --color-f1-border:    #333347;
+  --color-f1-silver:    #8a8a8a;
+  --color-f1-muted:     #5a5a72;
+  --color-f1-white:     #f5f5f5;
+  --color-f1-yellow:    #ffd700;
+  --color-f1-teal:      #00d2be;
+  --color-f1-green:     #39b54a;
+
+  /* Polices */
+  --font-f1:         "Titillium Web", system-ui, sans-serif;
+  --font-f1-display: "Orbitron", system-ui, monospace;
+}
+
+/* ── Base globale ─────────────────────────────────────────────────── */
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    font-family: var(--font-f1);
+    background-color: var(--color-f1-dark);
+    color: var(--color-f1-white);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Scrollbar fine */
+  ::-webkit-scrollbar          { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track    { background: var(--color-f1-dark); }
+  ::-webkit-scrollbar-thumb    { background: var(--color-f1-border); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--color-f1-muted); }
+}
+
+/* ── Composants utilitaires ───────────────────────────────────────── */
+@layer components {
+
+  /* Input / Select */
+  .f1-input {
+    width: 100%;
+    padding: 0.625rem 1rem;
+    border-radius: 0.5rem;
+    background-color: var(--color-f1-surface-2);
+    border: 1px solid var(--color-f1-border);
+    color: var(--color-f1-white);
+    font-family: var(--font-f1);
+    font-size: 0.875rem;
+    line-height: 1.5;
+    outline: none;
+    transition: border-color 0.15s ease, background-color 0.15s ease;
+    appearance: none;
+  }
+  .f1-input::placeholder       { color: var(--color-f1-muted); }
+  .f1-input:focus              { border-color: var(--color-f1-red); background-color: var(--color-f1-surface); }
+  .f1-input:disabled           { opacity: 0.5; cursor: not-allowed; }
+  .f1-input option             { background-color: var(--color-f1-surface-2); color: var(--color-f1-white); }
+
+  /* Label */
+  .f1-label {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-f1-silver);
+    margin-bottom: 0.375rem;
+  }
+
+  /* Card de base */
+  .f1-card {
+    background-color: var(--color-f1-surface);
+    border: 1px solid var(--color-f1-border);
+    border-radius: 1rem;
+  }
+
+  /* Bande rouge en haut de la carte */
+  .f1-stripe {
+    position: relative;
+    overflow: hidden;
+  }
+  .f1-stripe::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--color-f1-red), var(--color-f1-red-light));
+    border-radius: 1rem 1rem 0 0;
+  }
+
+  /* Séparateur */
+  .f1-divider {
+    height: 1px;
+    background-color: var(--color-f1-border);
+    margin: 1rem 0;
+  }
+
+  /* Badge position (podium, classement) */
+  .f1-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-f1-display);
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 0.15rem 0.5rem;
+    border-radius: 9999px;
+    letter-spacing: 0.05em;
+  }
+
+  /* Spinner inline */
+  .f1-spinner {
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    border-radius: 9999px;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    animation: spin 0.7s linear infinite;
+    flex-shrink: 0;
+  }
+}
+
+/* ── Animations ───────────────────────────────────────────────────── */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes f1-fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.f1-fade-in {
+  animation: f1-fade-in 0.2s ease forwards;
+}

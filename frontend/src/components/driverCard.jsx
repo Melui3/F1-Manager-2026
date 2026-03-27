@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { getDriverExtra, driverKey } from "../data/driverExtra";
+import Button from "./ui/Button";
 
 function cx(...arr) {
     return arr.filter(Boolean).join(" ");
@@ -7,16 +8,16 @@ function cx(...arr) {
 
 function Chip({ children }) {
     return (
-        <span className="text-[11px] px-2 py-1 rounded-full border border-gray-600 bg-gray-900/30 text-gray-200">
-      {children}
-    </span>
+        <span className="text-[11px] px-2 py-0.5 rounded-full border border-f1-border bg-f1-dark/60 text-f1-silver">
+            {children}
+        </span>
     );
 }
 
 function Section({ title, children }) {
     return (
-        <div className="rounded-2xl border border-gray-700 bg-gray-800/35 p-4">
-            <div className="text-xs text-gray-400 mb-3">{title}</div>
+        <div className="rounded-2xl border border-f1-border bg-f1-surface-2/30 p-4">
+            <div className="f1-label mb-3">{title}</div>
             {children}
         </div>
     );
@@ -25,9 +26,9 @@ function Section({ title, children }) {
 function Stat({ label, value }) {
     if (value === undefined || value === null) return null;
     return (
-        <div className="rounded-xl border border-gray-700 bg-gray-900/40 p-3 text-center">
-            <div className="text-[11px] text-gray-400">{label}</div>
-            <div className="text-xl font-black text-white leading-none mt-1">{value}</div>
+        <div className="rounded-xl border border-f1-border bg-f1-dark/50 p-3 text-center">
+            <div className="text-[11px] text-f1-muted">{label}</div>
+            <div className="font-f1-display text-xl font-black text-f1-white leading-none mt-1">{value}</div>
         </div>
     );
 }
@@ -35,8 +36,8 @@ function Stat({ label, value }) {
 function Row({ label, value }) {
     return (
         <div className="flex justify-between gap-3">
-            <span className="text-gray-400">{label}</span>
-            <span className="font-semibold text-gray-200 text-right">{value ?? "—"}</span>
+            <span className="text-f1-muted">{label}</span>
+            <span className="font-semibold text-f1-silver text-right">{value ?? "—"}</span>
         </div>
     );
 }
@@ -60,10 +61,9 @@ export default function DriverCard({ driver, isSelected, onSelect }) {
     const key = useMemo(() => driverKey(driver), [driver]);
     const extra = useMemo(() => getDriverExtra(driver), [driver]);
 
-    // ✅ GH Pages safe + ✅ no default image
     const photoSrc =
         surname && number !== ""
-            ? `${base}drivers/${surname.toLowerCase()}_${number}.avif`
+            ? `${base}drivers/${String(surname).toLowerCase()}_${number}.avif`
             : null;
 
     const age2026 = useMemo(() => {
@@ -105,44 +105,46 @@ export default function DriverCard({ driver, isSelected, onSelect }) {
         <div
             onClick={handleSelect}
             className={cx(
-                "rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 bg-gray-900 shadow-xl border",
-                isSelected ? "ring-4 ring-red-500 border-red-500/40 scale-[1.01]" : "border-gray-800 hover:scale-[1.005]"
+                "rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 bg-f1-dark shadow-xl border",
+                isSelected
+                    ? "ring-2 ring-f1-red border-f1-red/40 scale-[1.01]"
+                    : "border-f1-border hover:scale-[1.005] hover:border-f1-muted"
             )}
         >
-            {/* IMAGE (optional) */}
-            <div className="relative h-80 w-full overflow-hidden bg-gray-950">
+            {/* Photo */}
+            <div className="relative h-80 w-full overflow-hidden bg-f1-surface">
                 {photoSrc ? (
                     <img
                         src={photoSrc}
                         alt={fullName}
                         className="absolute inset-0 w-full h-full object-cover object-top"
-                        onError={(e) => {
-                            // ✅ if missing, remove image (no fallback)
-                            e.currentTarget.remove();
-                        }}
+                        onError={(e) => { e.currentTarget.remove(); }}
                     />
                 ) : null}
 
-                {/* overlay */}
-                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/35 to-transparent p-4">
-                    <div className="text-white">
+                {/* Gradient overlay */}
+                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent p-4">
+                    <div className="text-f1-white">
                         <div className="flex items-end justify-between gap-3">
-                            <div className="text-3xl font-black leading-none">#{number}</div>
-
-                            <div className="flex flex-wrap justify-end gap-2">
+                            <div className="font-f1-display text-3xl font-black leading-none text-f1-red">
+                                #{number}
+                            </div>
+                            <div className="flex flex-wrap justify-end gap-1.5">
                                 <Chip>{country}</Chip>
                                 {extra?.role && <Chip>{extra.role}</Chip>}
-                                {age2026 != null && <Chip>{age2026} ans (2026)</Chip>}
+                                {age2026 != null && <Chip>{age2026} ans</Chip>}
                                 {key && <Chip>{key}</Chip>}
                             </div>
                         </div>
 
-                        <div className="text-xl font-extrabold uppercase mt-1">{fullName}</div>
-                        <div className="text-sm text-gray-300">{team}</div>
+                        <div className="font-f1-display text-lg font-bold uppercase mt-1 tracking-wide">
+                            {fullName}
+                        </div>
+                        <div className="text-sm text-f1-silver mt-0.5">{team}</div>
 
                         {extra?.style && extra.style !== "—" && (
-                            <div className="mt-2 text-sm text-gray-200">
-                                <span className="text-gray-400">Style : </span>
+                            <div className="mt-2 text-sm text-f1-silver">
+                                <span className="text-f1-muted">Style : </span>
                                 {extra.style}
                             </div>
                         )}
@@ -150,10 +152,10 @@ export default function DriverCard({ driver, isSelected, onSelect }) {
                 </div>
             </div>
 
-            {/* Toggle */}
+            {/* Toggle détails */}
             <button
                 type="button"
-                className="w-full bg-gray-800 text-red-400 py-2.5 text-sm hover:bg-gray-700 border-t border-gray-700 font-semibold"
+                className="w-full bg-f1-surface text-f1-red py-2.5 text-sm hover:bg-f1-surface-2 border-t border-f1-border font-semibold transition-colors"
                 onClick={(e) => {
                     e.stopPropagation();
                     setShowDetails((v) => !v);
@@ -162,9 +164,9 @@ export default function DriverCard({ driver, isSelected, onSelect }) {
                 {showDetails ? "Masquer détails" : "Voir détails"}
             </button>
 
-            {/* DETAILS */}
+            {/* Détails */}
             {showDetails && (
-                <div className="p-4 bg-gray-900 border-t border-gray-800 space-y-3">
+                <div className="p-4 bg-f1-dark border-t border-f1-border space-y-3 f1-fade-in">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <Section title="Infos">
                             <div className="space-y-1.5 text-sm">
@@ -177,7 +179,7 @@ export default function DriverCard({ driver, isSelected, onSelect }) {
 
                         {traits.length ? (
                             <Section title="Tags">
-                                <div className="flex flex-wrap gap-2">
+                                <div className="flex flex-wrap gap-1.5">
                                     {traits.slice(0, 10).map((t, i) => (
                                         <Chip key={i}>{t}</Chip>
                                     ))}
@@ -192,7 +194,6 @@ export default function DriverCard({ driver, isSelected, onSelect }) {
                                 <Stat key={s.label} label={s.label} value={s.value} />
                             ))}
                         </div>
-
                         <div className="mt-2 grid grid-cols-2 sm:grid-cols-5 gap-2">
                             {consistencyStats.map((s) => (
                                 <Stat key={s.label} label={s.label} value={s.value} />
@@ -208,8 +209,8 @@ export default function DriverCard({ driver, isSelected, onSelect }) {
                             <div className="space-y-3">
                                 {strengths.length ? (
                                     <div>
-                                        <div className="text-xs text-gray-400 mb-1">Forces</div>
-                                        <div className="flex flex-wrap gap-2">
+                                        <div className="f1-label mb-1">Forces</div>
+                                        <div className="flex flex-wrap gap-1.5">
                                             {strengths.map((x, i) => (
                                                 <Chip key={i}>{x}</Chip>
                                             ))}
@@ -219,8 +220,8 @@ export default function DriverCard({ driver, isSelected, onSelect }) {
 
                                 {weaknesses.length ? (
                                     <div>
-                                        <div className="text-xs text-gray-400 mb-1">Faiblesses</div>
-                                        <div className="flex flex-wrap gap-2">
+                                        <div className="f1-label mb-1">Faiblesses</div>
+                                        <div className="flex flex-wrap gap-1.5">
                                             {weaknesses.map((x, i) => (
                                                 <Chip key={i}>{x}</Chip>
                                             ))}
@@ -230,30 +231,26 @@ export default function DriverCard({ driver, isSelected, onSelect }) {
 
                                 {notes.length ? (
                                     <div>
-                                        <div className="text-xs text-gray-400 mb-1">Notes</div>
-                                        <ul className="list-disc pl-5 text-gray-300 text-sm space-y-1">
-                                            {notes.map((x, i) => (
-                                                <li key={i}>{x}</li>
-                                            ))}
+                                        <div className="f1-label mb-1">Notes</div>
+                                        <ul className="list-disc pl-5 text-f1-silver text-sm space-y-1">
+                                            {notes.map((x, i) => <li key={i}>{x}</li>)}
                                         </ul>
                                     </div>
                                 ) : null}
 
                                 {funFacts.length ? (
                                     <div>
-                                        <div className="text-xs text-gray-400 mb-1">Fun facts</div>
-                                        <ul className="list-disc pl-5 text-gray-300 text-sm space-y-1">
-                                            {funFacts.map((x, i) => (
-                                                <li key={i}>{x}</li>
-                                            ))}
+                                        <div className="f1-label mb-1">Fun facts</div>
+                                        <ul className="list-disc pl-5 text-f1-silver text-sm space-y-1">
+                                            {funFacts.map((x, i) => <li key={i}>{x}</li>)}
                                         </ul>
                                     </div>
                                 ) : null}
                             </div>
                         </Section>
                     ) : (
-                        <div className="rounded-2xl border border-gray-800 bg-gray-800/20 p-4 text-sm text-gray-300">
-                            Profil manuel vide. Ajoute des champs dans <b>driverExtra.js</b> (traits/strengths/notes…) et ça remplira direct.
+                        <div className="rounded-2xl border border-f1-border bg-f1-surface-2/20 p-4 text-sm text-f1-silver">
+                            Profil manuel vide. Ajoute des champs dans <b>driverExtra.js</b> (traits/strengths/notes…).
                         </div>
                     )}
                 </div>
