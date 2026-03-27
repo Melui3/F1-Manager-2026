@@ -1,12 +1,14 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 
-import LoginScreen from "./pages/LoginScreen.jsx";
+import LoginScreen    from "./pages/LoginScreen.jsx";
 import RegisterScreen from "./pages/RegisterScreen.jsx";
-import ChooseTeam from "./pages/ChooseTeam.jsx";
-import ChooseDriver from "./pages/ChooseDriver.jsx";
-import StartSeason from "./pages/StartSeason.jsx";
-import Profile from "./pages/Profile.jsx";
+import ChooseTeam     from "./pages/ChooseTeam.jsx";
+import ChooseDriver   from "./pages/ChooseDriver.jsx";
+import StartSeason    from "./pages/StartSeason.jsx";
+import Standings      from "./pages/Standings.jsx";
+import Profile        from "./pages/Profile.jsx";
 
+import GameLayout from "./components/GameLayout.jsx";
 import { useGame } from "./context/GameContext";
 
 const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === "true";
@@ -22,33 +24,30 @@ function DemoBanner() {
 
 function HomeRedirect() {
     const { ready, isAuthenticated } = useGame();
-
-    // évite un flash avant chargement du localStorage
     if (!ready) return null;
-
     return <Navigate to={isAuthenticated ? "/choose-team" : "/login"} replace />;
 }
 
 export default function App() {
     return (
         <>
-        <DemoBanner />
-        <Routes>
-            {/* ✅ Fix: route racine */}
-            <Route path="/" element={<HomeRedirect />} />
+            <DemoBanner />
+            <Routes>
+                <Route path="/"         element={<HomeRedirect />} />
+                <Route path="/login"    element={<LoginScreen />} />
+                <Route path="/register" element={<RegisterScreen />} />
 
-            <Route path="/login" element={<LoginScreen />} />
-            <Route path="/register" element={<RegisterScreen />} />
+                {/* Setup (pas de GameNav) */}
+                <Route path="/choose-team"   element={<ChooseTeam />} />
+                <Route path="/choose-driver" element={<ChooseDriver />} />
 
-            {/* tes routes existantes */}
-            <Route path="/choose-team" element={<ChooseTeam />} />
-            <Route path="/choose-driver" element={<ChooseDriver />} />
-            <Route path="/start-season" element={<StartSeason />} />
-            <Route path="/profile" element={<Profile />} />
+                {/* Jeu (Header + GameNav via GameLayout) */}
+                <Route path="/start-season" element={<GameLayout><StartSeason /></GameLayout>} />
+                <Route path="/standings"    element={<GameLayout><Standings /></GameLayout>} />
+                <Route path="/profile"      element={<GameLayout><Profile /></GameLayout>} />
 
-            {/* ✅ fallback si route inconnue */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+                <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
         </>
     );
 }
