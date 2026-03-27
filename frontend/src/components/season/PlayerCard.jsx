@@ -132,6 +132,12 @@ function LeaderRow({ d, rank, isPlayer }) {
                 )}
             </span>
 
+            {(d?.wins ?? 0) > 0 && (
+                <span className="text-[9px] font-bold text-f1-yellow bg-f1-yellow/10 px-1 py-0.5 rounded-full shrink-0">
+                    {d.wins}W
+                </span>
+            )}
+
             <span className="font-f1-display text-xs font-bold text-f1-white tabular-nums shrink-0">
                 {d?.points ?? 0}
             </span>
@@ -153,6 +159,7 @@ export default function PlayerCard({
     wdcLoading,
     onReset,
     onOpenWdc,
+    budget,
 }) {
     const navigate = useNavigate();
     const { setTeam, setDriver } = useGame();
@@ -201,6 +208,13 @@ export default function PlayerCard({
                 <div className="w-full rounded-xl bg-f1-dark/60 border border-f1-border p-4 text-center">
                     <div className="f1-label">Points WDC</div>
                     <div className="font-f1-display text-4xl font-black text-f1-white mt-1">{playerPoints}</div>
+                </div>
+
+                <div className="w-full rounded-xl bg-f1-dark/60 border border-f1-border p-4 text-center">
+                    <div className="f1-label">Budget</div>
+                    <div className="font-f1-display text-2xl font-black text-f1-yellow mt-1">
+                        {budget != null ? `${(budget / 1_000_000).toFixed(0)}M` : "—"}
+                    </div>
                 </div>
 
                 <div className="w-full rounded-xl bg-f1-dark/60 border border-f1-border p-4">

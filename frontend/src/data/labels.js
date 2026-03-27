@@ -56,3 +56,38 @@ export const PODIUM_STYLE = {
     2: { ring: "border-gray-300/50    bg-gray-300/10",    text: "text-gray-300",    rank: "🥈" },
     3: { ring: "border-amber-600/50   bg-amber-600/10",   text: "text-amber-500",   rank: "🥉" },
 };
+
+// ─── GP country flags ─────────────────────────────────────────────────────────
+export const GP_FLAG = {
+    "Australian GP":    "🇦🇺",
+    "Chinese GP":       "🇨🇳",
+    "Japanese GP":      "🇯🇵",
+    "Bahrain GP":       "🇧🇭",
+    "Jeddah GP":        "🇸🇦",
+    "Miami GP":         "🇺🇸",
+    "Canadian GP":      "🇨🇦",
+    "Monaco GP":        "🇲🇨",
+    "Barcelona GP":     "🇪🇸",
+    "Austrian GP":      "🇦🇹",
+    "British GP":       "🇬🇧",
+    "Belgian GP":       "🇧🇪",
+    "Hungarian GP":     "🇭🇺",
+    "Dutch GP":         "🇳🇱",
+    "Italian GP":       "🇮🇹",
+    "Spanish GP":       "🇪🇸",
+    "Azerbaijan GP":    "🇦🇿",
+    "Singapore GP":     "🇸🇬",
+    "United States GP": "🇺🇸",
+    "Mexico GP":        "🇲🇽",
+    "Brazilian GP":     "🇧🇷",
+    "Las Vegas GP":     "🇺🇸",
+    "Qatar GP":         "🇶🇦",
+    "Abu Dhabi GP":     "🇦🇪",
+};
+
+// ─── Circuit type icons ───────────────────────────────────────────────────────
+export const CIRCUIT_ICON = {
+    street:     "🏙️",
+    high_speed: "⚡",
+    wet:        "🌧️",
+};

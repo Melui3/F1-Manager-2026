@@ -85,6 +85,8 @@ function initState() {
         drivers: SEED_DRIVERS.map((d) => ({ ...d, points: 0, wins: 0, podiums: 0, pole_positions: 0, fastest_laps: 0 })),
         sessions: buildCalendar(),
         user: { username: "DémoUser", avatar_key: "verstappen" },
+        season: 2026,
+        budget: 10_000_000,
     };
 }
 
@@ -133,13 +135,16 @@ function simulateSession(session, drivers) {
     }
 
     if (type === "QC" || type === "QS") {
-        return drivers.map((d) => {
+        const qualified = drivers.map((d) => {
             let boost = rand(3, 10);
             if (Math.random() * 100 < (d.error_rate || 0)) boost = Math.max(0, boost - 5);
             d.speed    = clamp(d.speed    + boost);
             d.reaction = clamp(d.reaction + boost);
             return { ...d, points_gained: 0, stats_gained: boost };
         }).sort((a, b) => b.stats_gained - a.stats_gained);
+        // Pole position for P1
+        if (qualified[0]) qualified[0].pole_positions = (qualified[0].pole_positions || 0) + 1;
+        return qualified;
     }
 
     if (type === "S") {
@@ -148,9 +153,11 @@ function simulateSession(session, drivers) {
         return sorted.map((d, i) => {
             const boost  = rand(5, 12);
             const points = PTS[i] ?? 0;
-            d.points = (d.points || 0) + points;
-            d.speed  = clamp(d.speed  + boost);
-            d.racing = clamp(d.racing + boost);
+            d.points  = (d.points  || 0) + points;
+            d.wins    = (d.wins    || 0) + (i === 0 ? 1 : 0);
+            d.podiums = (d.podiums || 0) + (i < 3  ? 1 : 0);
+            d.speed   = clamp(d.speed  + boost);
+            d.racing  = clamp(d.racing + boost);
             return { ...d, points_gained: points, stats_gained: boost, position: i + 1 };
         });
     }
@@ -162,6 +169,8 @@ function simulateSession(session, drivers) {
         const boost  = rand(5, 20);
         const points = PTS[i] ?? 0;
         d.points   = (d.points   || 0) + points;
+        d.wins     = (d.wins     || 0) + (i === 0 ? 1 : 0);
+        d.podiums  = (d.podiums  || 0) + (i < 3  ? 1 : 0);
         d.speed    = clamp(d.speed    + boost);
         d.racing   = clamp(d.racing   + boost);
         d.reaction = clamp(d.reaction + boost);
@@ -227,8 +236,45 @@ export function mockResetSeason() {
     const s = getState();
     s.sessions = buildCalendar();
     s.drivers  = SEED_DRIVERS.map((d) => ({ ...d, points: 0, wins: 0, podiums: 0, pole_positions: 0, fastest_laps: 0 }));
+    s.season   = (s.season || 2026) + 1;
+    s.budget   = 10_000_000;
     saveState(s);
-    return {};
+    return { season: s.season };
+}
+
+export function mockGetBudget() {
+    return { budget: getState().budget || 0 };
+}
+
+export function mockAwardBudget(amount) {
+    const s = getState();
+    s.budget = (s.budget || 0) + Math.max(0, Number(amount) || 0);
+    saveState(s);
+    return { budget: s.budget };
+}
+
+const TRAINING_COST = {
+    speed: 5_000_000,
+    racing: 5_000_000,
+    reaction: 5_000_000,
+    consistency: 3_000_000,
+    experience: 3_000_000,
+};
+
+export function mockTrain(driverId, stat) {
+    const cost = TRAINING_COST[stat];
+    if (!cost) throw Object.assign(new Error("Stat invalide"), { status: 400 });
+
+    const s = getState();
+    if ((s.budget || 0) < cost) throw Object.assign(new Error("Budget insuffisant"), { status: 400 });
+
+    const driver = s.drivers.find((d) => d.id === driverId);
+    if (!driver) throw Object.assign(new Error("Pilote introuvable"), { status: 404 });
+
+    s.budget -= cost;
+    driver[stat] = Math.min(100, (driver[stat] || 0) + 2);
+    saveState(s);
+    return { budget: s.budget, driver: { ...driver } };
 }
 
 // ─── Dispatcher principal ────────────────────────────────────────────────────
@@ -252,6 +298,12 @@ export function mockDispatch(path, options = {}) {
 
     // Saison
     if (method === "POST" && path === "/api/season/reset/") return Promise.resolve(mockResetSeason());
+    if (method === "GET"  && path === "/api/season/budget/")        return Promise.resolve(mockGetBudget());
+    if (method === "POST" && path === "/api/season/budget/award/")  return Promise.resolve(mockAwardBudget(body.amount));
+    if (method === "POST" && path === "/api/season/train/") {
+        try { return Promise.resolve(mockTrain(body.driver_id, body.stat)); }
+        catch (e) { return Promise.reject(e); }
+    }
 
     // Simulation : /api/simulate/session/42/?force=1
     const simMatch = path.match(/^\/api\/simulate\/session\/(\d+)\//);

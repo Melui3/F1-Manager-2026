@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useGame } from "../context/GameContext";
-import Header from "../components/Header.jsx";
 import TeamCard from "../components/TeamCard.jsx";
 import { apiFetch } from "../services/api.js";
 import { TEAM_EXTRA } from "../data/teamExtra.js";
@@ -69,14 +68,10 @@ export default function ChooseTeam() {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-f1-dark text-f1-white flex flex-col">
-                <Header userName={userName} />
-                <main className="flex-1 p-6 flex items-center justify-center">
-                    <div className="flex items-center gap-3 text-f1-silver">
-                        <span className="f1-spinner" />
-                        Chargement des teams…
-                    </div>
-                </main>
+            <div className="flex-1 p-6 flex items-center justify-center">
+                <div className="flex items-center gap-3 text-f1-silver">
+                    <span className="f1-spinner" />Chargement des teams…
+                </div>
             </div>
         );
     }
@@ -85,10 +80,7 @@ export default function ChooseTeam() {
     const extra = selectedTeam?._extra || null;
 
     return (
-        <div className="min-h-screen bg-f1-dark text-f1-white flex flex-col">
-            <Header userName={userName} />
-
-            <main className="flex-1 p-6 flex flex-col lg:flex-row gap-6 f1-fade-in">
+        <div className="flex-1 p-6 flex flex-col lg:flex-row gap-6 f1-fade-in">
                 {/* GAUCHE */}
                 <div className="flex-1">
                     <h1 className="font-f1-display text-3xl font-bold mb-1">
@@ -203,7 +195,6 @@ export default function ChooseTeam() {
                         Team aléatoire
                     </Button>
                 </Card>
-            </main>
         </div>
     );
 }

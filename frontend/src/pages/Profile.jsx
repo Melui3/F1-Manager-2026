@@ -1,9 +1,11 @@
+import { useEffect, useState } from "react";
 import AvatarPicker from "../components/AvatarPicker.jsx";
 import { useGame } from "../context/GameContext";
 import { useNavigate } from "react-router-dom";
 import Button from "../components/ui/Button";
 import Card from "../components/ui/Card";
 import { TEAM_COLOR, COUNTRY_FLAG } from "../data/labels";
+import { apiFetch } from "../services/api";
 
 // ─── Stat bar ─────────────────────────────────────────────────────────────────
 
@@ -25,11 +27,45 @@ function StatBar({ label, value, max = 100 }) {
     );
 }
 
+// ─── Training upgrades ────────────────────────────────────────────────────────
+
+const UPGRADES = [
+    { stat: "speed",       label: "Vitesse",     desc: "+2 Speed",       cost: 5_000_000, icon: "🏎️" },
+    { stat: "racing",      label: "Course",      desc: "+2 Racing",      cost: 5_000_000, icon: "🎯" },
+    { stat: "reaction",    label: "Réflexes",    desc: "+2 Reaction",    cost: 5_000_000, icon: "⚡" },
+    { stat: "consistency", label: "Régularité",  desc: "+2 Consistency", cost: 3_000_000, icon: "📊" },
+    { stat: "experience",  label: "Expérience",  desc: "+2 Experience",  cost: 3_000_000, icon: "🧠" },
+];
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function Profile() {
-    const { userName, userAvatar, setUserAvatar, setAvatarKey, logout, driver, team } = useGame();
+    const { userName, userAvatar, setUserAvatar, setAvatarKey, logout, driver, setDriver, team } = useGame();
     const nav = useNavigate();
+
+    const [budget, setBudget] = useState(null);
+    const [training, setTraining] = useState(null);
+
+    useEffect(() => {
+        apiFetch("/api/season/budget/").then((res) => setBudget(res?.budget ?? 0)).catch(() => setBudget(0));
+    }, []);
+
+    const handleTrain = async (stat) => {
+        if (!driver?.id || budget == null) return;
+        setTraining({ loading: stat, error: null });
+        try {
+            const res = await apiFetch("/api/season/train/", {
+                method: "POST",
+                body: JSON.stringify({ driver_id: driver.id, stat }),
+            });
+            setBudget(res.budget);
+            setDriver({ ...driver, ...res.driver });
+        } catch (e) {
+            setTraining({ loading: null, error: e?.message || "Erreur entraînement" });
+        } finally {
+            setTraining((t) => ({ ...t, loading: null }));
+        }
+    };
 
     function onChanged(url, key) {
         setUserAvatar(url);
@@ -115,6 +151,50 @@ export default function Profile() {
                                 <StatBar label="Consistency" value={driver.consistency} />
                                 <StatBar label="Wet"         value={driver.wet_circuit_affinity} />
                             </div>
+                        </div>
+                    </Card>
+                )}
+
+                {/* Entraînement */}
+                {driver && budget != null && (
+                    <Card className="p-5 md:col-span-2">
+                        <div className="flex items-center justify-between mb-4">
+                            <h2 className="font-f1-display text-sm font-bold tracking-widest text-f1-red uppercase">
+                                Entraînement
+                            </h2>
+                            <div className="font-f1-display font-bold text-f1-yellow">
+                                {(budget / 1_000_000).toFixed(0)}M budget
+                            </div>
+                        </div>
+
+                        {training?.error && <div className="text-red-400 text-sm mb-3">{training.error}</div>}
+
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                            {UPGRADES.map(({ stat, label, desc, cost, icon }) => {
+                                const canAfford = budget >= cost;
+                                const currentVal = driver[stat];
+                                return (
+                                    <button
+                                        key={stat}
+                                        onClick={() => handleTrain(stat)}
+                                        disabled={!canAfford || training?.loading === stat}
+                                        className={[
+                                            "flex flex-col items-center gap-2 p-3 rounded-xl border text-sm transition-all",
+                                            canAfford
+                                                ? "border-f1-border bg-f1-dark/40 hover:border-f1-red/40 hover:bg-f1-red/5 cursor-pointer"
+                                                : "border-f1-border/30 bg-f1-dark/20 opacity-40 cursor-not-allowed",
+                                        ].join(" ")}
+                                    >
+                                        <span className="text-2xl">{icon}</span>
+                                        <span className="font-f1-display font-bold text-f1-white text-sm">{label}</span>
+                                        <span className="text-f1-muted text-xs">{desc}</span>
+                                        <span className="text-[10px] font-bold text-f1-yellow">{cost / 1_000_000}M</span>
+                                        {currentVal != null && (
+                                            <span className="font-f1-display text-xs text-f1-silver">Val: {currentVal}</span>
+                                        )}
+                                    </button>
+                                );
+                            })}
                         </div>
                     </Card>
                 )}

@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useGame } from "../context/GameContext";
-import Header from "../components/Header.jsx";
 import DriverCard from "../components/DriverCard";
 import { apiFetch } from "../services/api";
 import Button from "../components/ui/Button";
@@ -70,20 +69,14 @@ export default function ChooseDriver() {
 
     if (!team) {
         return (
-            <div className="min-h-screen bg-f1-dark text-f1-white flex flex-col">
-                <Header userName={userName} />
-                <main className="flex-1 p-6 flex items-center justify-center">
-                    <div className="text-f1-silver">Redirection…</div>
-                </main>
+            <div className="flex-1 p-6 flex items-center justify-center">
+                <div className="text-f1-silver">Redirection…</div>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-f1-dark text-f1-white flex flex-col">
-            <Header userName={userName} />
-
-            <main className="flex-1 p-6 flex flex-col lg:flex-row gap-6 f1-fade-in">
+        <div className="flex-1 p-6 flex flex-col lg:flex-row gap-6 f1-fade-in">
                 {/* GAUCHE */}
                 <div className="flex-1">
                     <h1 className="font-f1-display text-3xl font-bold mb-1">
@@ -176,7 +169,6 @@ export default function ChooseDriver() {
                         Pilote aléatoire
                     </Button>
                 </Card>
-            </main>
         </div>
     );
 }

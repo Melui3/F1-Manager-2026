@@ -66,6 +66,11 @@ function DriverRow({ rank, driver, isPlayer }) {
             </div>
 
             <div className="flex items-center gap-3 shrink-0">
+                {(driver.wins ?? 0) > 0 && (
+                    <span className="text-xs font-bold text-f1-yellow bg-f1-yellow/10 px-2 py-0.5 rounded-full tabular-nums">
+                        {driver.wins}W
+                    </span>
+                )}
                 <span className="font-f1-display font-bold text-base text-f1-white tabular-nums">
                     {driver.points ?? 0}
                 </span>
@@ -114,7 +119,7 @@ function TeamRow({ rank, entry }) {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function Standings() {
-    const { driver: playerDriver } = useGame();
+    const { driver: playerDriver, sim } = useGame();
     const [drivers, setDrivers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -148,7 +153,7 @@ export default function Standings() {
             {/* Titre */}
             <div className="mb-6">
                 <h1 className="font-f1-display text-3xl font-bold">
-                    CLASSEMENTS <span className="text-f1-red">2026</span>
+                    CLASSEMENTS <span className="text-f1-red">{sim?.season ?? 2026}</span>
                 </h1>
                 {!loading && leader && (
                     <p className="text-f1-silver text-sm mt-1">

@@ -1,6 +1,6 @@
 import Button from "../ui/Button";
 import Alert from "../ui/Alert";
-import { SESSION_LABEL, PODIUM_STYLE } from "../../data/labels";
+import { SESSION_LABEL, PODIUM_STYLE, GP_FLAG, CIRCUIT_ICON } from "../../data/labels";
 
 // ─── GP status helpers ────────────────────────────────────────────────────────
 
@@ -94,30 +94,43 @@ function SessionRow({ s, isBusy, onSimulate, onForce }) {
 
 // ─── GP card ──────────────────────────────────────────────────────────────────
 
-function GpCard({ gpName, sessions, expanded, onToggle, isBusy, onSimulate, onForce }) {
+function GpCard({ gpName, sessions, expanded, onToggle, isBusy, onSimulate, onForce, onSimulateGp }) {
     const status = gpStatus(sessions);
     const ui = statusUI(status);
     const gpDate = sessions?.[0]?.date ?? "—";
     const circuit = sessions?.[0]?.circuit_name ?? "—";
+    const remaining = sessions.filter((s) => !s.is_simulated).length;
 
     return (
         <div className={`border-2 rounded-2xl p-4 md:p-5 transition-all ${ui.card}`}>
-            <div
-                className="flex items-center justify-between gap-3 cursor-pointer select-none"
-                onClick={onToggle}
-            >
-                <div className="flex flex-col gap-1">
+            <div className="flex items-center justify-between gap-3">
+                <div className="flex flex-col gap-1 flex-1 cursor-pointer select-none" onClick={onToggle}>
                     <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-f1-display font-bold text-base text-f1-white">
-                            {gpName}
-                        </span>
-                        <span className={`text-xs px-2 py-0.5 rounded-full border ${ui.pill}`}>
-                            {ui.label}
-                        </span>
+                        <span className="text-lg">{GP_FLAG[gpName] ?? "🏁"}</span>
+                        <span className="font-f1-display font-bold text-base text-f1-white">{gpName}</span>
+                        <span className={`text-xs px-2 py-0.5 rounded-full border ${ui.pill}`}>{ui.label}</span>
+                        {sessions?.[0]?.circuit_type && (
+                            <span className="text-sm" title={sessions[0].circuit_type}>
+                                {CIRCUIT_ICON[sessions[0].circuit_type] ?? ""}
+                            </span>
+                        )}
                     </div>
                     <span className="text-sm text-f1-silver">{circuit} • {gpDate}</span>
                 </div>
-                <span className="text-f1-muted text-sm shrink-0">{expanded ? "▲" : "▼"}</span>
+
+                <div className="flex items-center gap-2 shrink-0">
+                    {remaining > 0 && (
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={(e) => { e.stopPropagation(); onSimulateGp(); }}
+                            disabled={isBusy}
+                        >
+                            Simuler GP
+                        </Button>
+                    )}
+                    <span className="text-f1-muted text-sm">{expanded ? "▲" : "▼"}</span>
+                </div>
             </div>
 
             {expanded && (
@@ -156,9 +169,11 @@ export default function CalendarSection({
     onSimulateAll,
     onForceAll,
     onSimulateOne,
+    onSimulateGp,
     onStop,
     totalSessions,
     simulatedSessions,
+    season,
 }) {
     return (
         <section className="flex-1 flex flex-col gap-5">
@@ -169,7 +184,7 @@ export default function CalendarSection({
                 <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-5">
                     <div className="flex-1">
                         <h1 className="font-f1-display text-2xl md:text-3xl font-bold">
-                            CALENDRIER <span className="text-f1-red">2026</span>
+                            CALENDRIER <span className="text-f1-red">{season ?? 2026}</span>
                         </h1>
 
                         <div className="mt-4 rounded-xl border border-f1-border bg-f1-dark/60 p-4">
@@ -275,6 +290,7 @@ export default function CalendarSection({
                                 isBusy={isBusy}
                                 onSimulate={onSimulateOne}
                                 onForce={onSimulateOne}
+                                onSimulateGp={() => onSimulateGp(gpName)}
                             />
                         );
                     })
