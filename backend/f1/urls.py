@@ -15,6 +15,10 @@ urlpatterns = [
     path("auth/avatar/", set_avatar),
     path("auth/register/", register),
 
+    # BUDGET
+    path("season/budget/", views.budget_get),
+    path("season/budget/award/", views.budget_award),
+
     # SIMULATION
     path("simulate/session/<int:session_index>/", views.simulate_one),
     path("simulate/next/", views.simulate_next_view),

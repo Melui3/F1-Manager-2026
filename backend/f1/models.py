@@ -71,6 +71,18 @@ class SessionResult(models.Model):
     class Meta:
         unique_together = ("session", "driver")
 
+class GameState(models.Model):
+    budget = models.BigIntegerField(default=0)
+
+    @classmethod
+    def get(cls):
+        obj, _ = cls.objects.get_or_create(pk=1, defaults={"budget": 0})
+        return obj
+
+    def __str__(self):
+        return f"GameState(budget={self.budget})"
+
+
 class Profile(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="profile")
     avatar_key = models.CharField(max_length=64, default="default")

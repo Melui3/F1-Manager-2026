@@ -2,7 +2,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
-from .models import Driver, SeasonSession, Team
+from .models import Driver, GameState, SeasonSession, Team
 from .services.simulation import simulate_session, simulate_next, reset_season
 
 
@@ -92,4 +92,21 @@ def simulate_next_view(request):
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def season_reset_view(request):
+    GameState.get().__class__.objects.filter(pk=1).update(budget=0)
     return Response(reset_season())
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def budget_get(request):
+    return Response({"budget": GameState.get().budget})
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def budget_award(request):
+    amount = int(request.data.get("amount", 0))
+    state = GameState.get()
+    state.budget += amount
+    state.save()
+    return Response({"budget": state.budget})
