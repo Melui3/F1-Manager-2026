@@ -1,14 +1,44 @@
 import { useMemo, useState } from "react";
-import { getDriverExtra, driverKey } from "../data/driverExtra";
-import Button from "./ui/Button";
+import { getDriverExtra } from "../data/driverExtra";
+import FlagBadge from "./ui/FlagBadge";
 
 function cx(...arr) {
     return arr.filter(Boolean).join(" ");
 }
 
-function Chip({ children }) {
+const TEAM_ACCENT = {
+    "Oracle Red Bull Racing": "#3671c6",
+    "Scuderia Ferrari HP": "#e10600",
+    "Mercedes-AMG Petronas Formula One Team": "#00d2be",
+    "McLaren Mastercard Formula 1 Team": "#ff8000",
+    "Aston Martin Aramco Formula One Team": "#229971",
+    "BWT Alpine F1 Team": "#0090ff",
+    "Audi F1 Team (Revolut)": "#d7d7d7",
+    "Cadillac Formula One Team": "#d6b45f",
+    "TGR Hass F1 Team": "#b6babd",
+    "Atlassian Williams Racing": "#64c4ff",
+    "Visa Cash App Racing Bulls F1 Team": "#6692ff",
+    "Red Bull": "#3671c6",
+    Mercedes: "#00d2be",
+    Ferrari: "#e80020",
+    McLaren: "#ff8000",
+    "Aston Martin": "#229971",
+    Alpine: "#0090ff",
+    Williams: "#64c4ff",
+    "Racing Bulls": "#6692ff",
+    "Kick Sauber": "#52e252",
+    Haas: "#b6babd",
+};
+
+function Chip({ children, className = "", style }) {
     return (
-        <span className="text-[11px] px-2 py-0.5 rounded-full border border-f1-border bg-f1-dark/60 text-f1-silver">
+        <span
+            className={cx(
+                "text-[11px] px-2 py-0.5 rounded-full border border-f1-border bg-f1-dark/60 text-f1-silver",
+                className
+            )}
+            style={style}
+        >
             {children}
         </span>
     );
@@ -46,7 +76,7 @@ function listToChips(arr) {
     return Array.isArray(arr) ? arr.filter(Boolean) : [];
 }
 
-export default function DriverCard({ driver, isSelected, onSelect }) {
+export default function DriverCard({ driver, isSelected, onSelect, badge = null }) {
     const [showDetails, setShowDetails] = useState(false);
 
     const base = import.meta.env.BASE_URL;
@@ -57,9 +87,10 @@ export default function DriverCard({ driver, isSelected, onSelect }) {
     const team = driver?.team ?? "—";
     const country = driver?.country ?? "—";
 
+    const teamLabel = typeof team === "object" && team !== null ? team.name ?? "Ecurie" : team;
     const fullName = `${name} ${surname}`.trim() || "Pilote";
-    const key = useMemo(() => driverKey(driver), [driver]);
     const extra = useMemo(() => getDriverExtra(driver), [driver]);
+    const accent = TEAM_ACCENT[teamLabel] ?? "#e10600";
 
     const photoSrc =
         surname && number !== ""
@@ -101,18 +132,34 @@ export default function DriverCard({ driver, isSelected, onSelect }) {
         if (typeof onSelect === "function") onSelect(driver);
     };
 
+    const handleKeyDown = (event) => {
+        if (event.target !== event.currentTarget) return;
+        if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            handleSelect();
+        }
+    };
+
     return (
         <div
+            role="button"
+            tabIndex={0}
+            aria-pressed={Boolean(isSelected)}
+            aria-label={`Choisir ${fullName}, pilote ${teamLabel}`}
             onClick={handleSelect}
+            onKeyDown={handleKeyDown}
+            style={{
+                "--driver-accent": accent,
+                "--driver-glow": `${accent}52`,
+                "--driver-soft": `${accent}2e`,
+            }}
             className={cx(
-                "rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 bg-f1-dark shadow-xl border",
-                isSelected
-                    ? "ring-2 ring-f1-red border-f1-red/40 scale-[1.01]"
-                    : "border-f1-border hover:scale-[1.005] hover:border-f1-muted"
+                "f1-driver-card rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 bg-f1-dark shadow-xl border focus:outline-none",
+                isSelected ? "is-selected scale-[1.01]" : "hover:scale-[1.005]"
             )}
         >
             {/* Photo */}
-            <div className="relative h-80 w-full overflow-hidden bg-f1-surface">
+            <div className="f1-driver-card-photo relative z-10 h-80 w-full overflow-hidden bg-f1-surface">
                 {photoSrc ? (
                     <img
                         src={photoSrc}
@@ -126,21 +173,36 @@ export default function DriverCard({ driver, isSelected, onSelect }) {
                 <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent p-4">
                     <div className="text-f1-white">
                         <div className="flex items-end justify-between gap-3">
-                            <div className="font-f1-display text-3xl font-black leading-none text-f1-red">
+                            <div className="font-f1-display text-3xl font-black leading-none" style={{ color: accent }}>
                                 #{number}
                             </div>
                             <div className="flex flex-wrap justify-end gap-1.5">
-                                <Chip>{country}</Chip>
+                                <FlagBadge country={country} compact className="bg-f1-dark/60" />
+                                {isSelected && (
+                                    <Chip
+                                        className="text-f1-white"
+                                        style={{ borderColor: accent, backgroundColor: `${accent}24` }}
+                                    >
+                                        Choisi
+                                    </Chip>
+                                )}
+                                {badge && (
+                                    <Chip
+                                        className="text-f1-white"
+                                        style={{ borderColor: accent, backgroundColor: `${accent}24` }}
+                                    >
+                                        {badge}
+                                    </Chip>
+                                )}
                                 {extra?.role && <Chip>{extra.role}</Chip>}
                                 {age2026 != null && <Chip>{age2026} ans</Chip>}
-                                {key && <Chip>{key}</Chip>}
                             </div>
                         </div>
 
                         <div className="font-f1-display text-lg font-bold uppercase mt-1 tracking-wide">
                             {fullName}
                         </div>
-                        <div className="text-sm text-f1-silver mt-0.5">{team}</div>
+                        <div className="text-sm text-f1-silver mt-0.5">{teamLabel}</div>
 
                         {extra?.style && extra.style !== "—" && (
                             <div className="mt-2 text-sm text-f1-silver">
@@ -155,7 +217,8 @@ export default function DriverCard({ driver, isSelected, onSelect }) {
             {/* Toggle détails */}
             <button
                 type="button"
-                className="w-full bg-f1-surface text-f1-red py-2.5 text-sm hover:bg-f1-surface-2 border-t border-f1-border font-semibold transition-colors"
+                className="relative z-10 w-full bg-f1-surface py-2.5 text-sm hover:bg-f1-surface-2 border-t border-f1-border font-semibold transition-colors"
+                style={{ color: accent }}
                 onClick={(e) => {
                     e.stopPropagation();
                     setShowDetails((v) => !v);
@@ -166,14 +229,14 @@ export default function DriverCard({ driver, isSelected, onSelect }) {
 
             {/* Détails */}
             {showDetails && (
-                <div className="p-4 bg-f1-dark border-t border-f1-border space-y-3 f1-fade-in">
+                <div className="relative z-10 p-4 bg-f1-dark border-t border-f1-border space-y-3 f1-fade-in">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <Section title="Infos">
                             <div className="space-y-1.5 text-sm">
-                                <Row label="Pays" value={country} />
+                                <Row label="Pays" value={<FlagBadge country={country} />} />
                                 <Row label="Numéro" value={number !== "" ? `#${number}` : "—"} />
                                 {extra?.birthYear && <Row label="Naissance" value={extra.birthYear} />}
-                                {extra?.displayName && <Row label="Nom (manuel)" value={extra.displayName} />}
+                                {extra?.displayName && <Row label="Nom complet" value={extra.displayName} />}
                             </div>
                         </Section>
 
@@ -188,7 +251,7 @@ export default function DriverCard({ driver, isSelected, onSelect }) {
                         ) : null}
                     </div>
 
-                    <Section title="Stats (backend)">
+                    <Section title="Stats de simulation">
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                             {coreStats.map((s) => (
                                 <Stat key={s.label} label={s.label} value={s.value} />
@@ -205,7 +268,7 @@ export default function DriverCard({ driver, isSelected, onSelect }) {
                     </Section>
 
                     {hasManual ? (
-                        <Section title="Profil (manuel)">
+                        <Section title="Profil pilote">
                             <div className="space-y-3">
                                 {strengths.length ? (
                                     <div>
@@ -250,7 +313,7 @@ export default function DriverCard({ driver, isSelected, onSelect }) {
                         </Section>
                     ) : (
                         <div className="rounded-2xl border border-f1-border bg-f1-surface-2/20 p-4 text-sm text-f1-silver">
-                            Profil manuel vide. Ajoute des champs dans <b>driverExtra.js</b> (traits/strengths/notes…).
+                            Profil detaille indisponible pour ce pilote.
                         </div>
                     )}
                 </div>

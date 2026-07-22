@@ -66,3 +66,25 @@ Pour l’activer :
 
 ```env
 VITE_DEMO_MODE=true
+VITE_API_BASE=
+```
+
+En production, le projet est configure pour tourner en mode client-only par defaut.
+Toute la partie jeu est stockee dans `localStorage` :
+
+- profils managers multiples et avatars ;
+- choix de l'ecurie et du pilote ;
+- calendrier, resultats et historique des sessions ;
+- budget, entrainement pilote et R&D ecurie ;
+- export/import de sauvegarde depuis la page `Mon Equipe`.
+
+L'ecran d'accueil sert de hub de sessions locales : creer un manager, reprendre
+une session, rafraichir la liste, remettre une partie a zero ou supprimer une
+sauvegarde. Il n'y a plus de connexion obligatoire en mode client-only.
+
+Pour rebrancher un backend plus tard :
+
+```env
+VITE_DEMO_MODE=false
+VITE_API_BASE=https://ton-api.example.com
+```

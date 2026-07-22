@@ -1,5 +1,6 @@
 import Header from "./Header";
 import GameNav from "./GameNav";
+import PrivacyFooter from "./PrivacyFooter";
 
 /**
  * Layout pour les pages en jeu (Calendrier, Classements, Mon Équipe).
@@ -14,6 +15,7 @@ export default function GameLayout({ children }) {
             <main className="flex-1 flex flex-col">
                 {children}
             </main>
+            <PrivacyFooter />
         </div>
     );
 }

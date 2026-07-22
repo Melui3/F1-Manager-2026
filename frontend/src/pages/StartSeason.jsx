@@ -8,17 +8,24 @@ import SessionResultsModal from "../components/modals/SessionResultsModal";
 import WdcModal from "../components/modals/WdcModal";
 import CalendarSection from "../components/season/CalendarSection";
 import PlayerCard from "../components/season/PlayerCard";
+import ChampionStage from "../components/season/ChampionStage";
 import Button from "../components/ui/Button";
+import ConfirmModal from "../components/modals/ConfirmModal";
 
 // ─── Budget award tables ──────────────────────────────────────────────────────
 
-const GP_BUDGET     = [20,15,15,10,10,10,8,8,5,5,3,3,3,3,3,2,2,2,2,2,2,2];
-const SPRINT_BUDGET = [8,5,5,3,3,2,2,2,2,2,1,1,1,1,1,1,1,1,1,1,1,1];
+const GP_BUDGET     = [5,4,3.5,3,2.5,2.2,2,1.8,1.6,1.4,1.2,1,0.9,0.8,0.7,0.6,0.5,0.5,0.4,0.4,0.3,0.3];
+const SPRINT_BUDGET = [2,1.5,1.2,1,0.8,0.7,0.6,0.5,0.5,0.4,0.4,0.3,0.3,0.3,0.2,0.2,0.2,0.2,0.2,0.1,0.1,0.1];
 
 function earnedBudget(position, sessionType) {
     const table = sessionType === "GP" ? GP_BUDGET : SPRINT_BUDGET;
     const idx = Math.max(0, (position || 22) - 1);
     return (table[idx] ?? 1) * 1_000_000;
+}
+
+function fmtBudget(value) {
+    const millions = (Number(value) || 0) / 1_000_000;
+    return `${millions >= 10 ? Math.round(millions) : millions.toFixed(1)}M`;
 }
 
 // ─── Team border styles ───────────────────────────────────────────────────────
@@ -56,10 +63,44 @@ const isSameDriver = (a, b) => {
     return !!aSurname && !!bSurname && aSurname === bSurname && aNum !== null && aNum === bNum;
 };
 
+function buildSessionRecap(results, player, meta, earned = 0) {
+    const sorted = Array.isArray(results)
+        ? [...results].sort((a, b) => (a?.position ?? 999) - (b?.position ?? 999))
+        : [];
+    const winner = sorted[0] || null;
+    const playerResult = sorted.find((r) => isSameDriver(r, player)) || null;
+    const topThree = sorted.slice(0, 3);
+    const sessionLabel = SESSION_LABEL[meta?.session_type] ?? meta?.session_type ?? "Session";
+    const isRace = meta?.session_type === "GP" || meta?.session_type === "S";
+
+    const events = [];
+    if (winner) {
+        events.push(`${winner.surname} remporte ${sessionLabel} devant ${topThree[1]?.surname ?? "le peloton"}.`);
+    }
+    if (playerResult?.position) {
+        events.push(`${player?.surname ?? "Ton pilote"} termine P${playerResult.position}${earned ? ` et rapporte ${fmtBudget(earned)}` : ""}.`);
+    }
+    if (topThree.length >= 3) {
+        events.push(`Podium: ${topThree.map((r) => `${r.position}. ${r.surname}`).join(" / ")}.`);
+    }
+    if (!isRace && playerResult?.stats_gained) {
+        events.push(`Travail utile: +${playerResult.stats_gained} progression sur cette session.`);
+    }
+
+    return {
+        title: winner ? `${winner.surname} en tete` : "Session terminee",
+        playerPosition: playerResult?.position ?? null,
+        winner,
+        topThree,
+        isRace,
+        events,
+    };
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function StartSeason() {
-    const { team, driver, sim, setSim } = useGame();
+    const { team, driver, sim, setDriver, setSim } = useGame();
     const navigate = useNavigate();
     const { addToast } = useToast();
     const season = sim?.season ?? 2026;
@@ -75,11 +116,12 @@ export default function StartSeason() {
 
     const [lastResults, setLastResults] = useState([]);
     const [lastSessionMeta, setLastSessionMeta] = useState(null);
+    const [lastEvents, setLastEvents] = useState([]);
+    const [lastSummary, setLastSummary] = useState(null);
+    const [lastBudgetAward, setLastBudgetAward] = useState(null);
 
     const [prevPlayerStats, setPrevPlayerStats] = useState(null);
     const [playerStats, setPlayerStats] = useState(null);
-
-    const [resultsTick, setResultsTick] = useState(0);
 
     const [activeModal, setActiveModal] = useState(null);
 
@@ -90,18 +132,6 @@ export default function StartSeason() {
     const [simAllLoading, setSimAllLoading] = useState(false);
     const [simAllProgress, setSimAllProgress] = useState({ done: 0, total: 0 });
     const simAllAbortRef = useRef(false);
-
-    // ── Early return (no team/driver) ──────────────────────────────────────────
-    if (!team || !driver) {
-        return (
-            <div className="flex-1 flex items-center justify-center p-6">
-                <div className="text-center">
-                    <h1 className="font-f1-display text-2xl font-bold mb-2">Team ou pilote manquant</h1>
-                    <p className="text-f1-silver">Retourne choisir une team puis un pilote.</p>
-                </div>
-            </div>
-        );
-    }
 
     // ── Derived state ──────────────────────────────────────────────────────────
 
@@ -139,6 +169,57 @@ export default function StartSeason() {
         [calendar]
     );
 
+    const playerRank = useMemo(
+        () => driversBoard.findIndex((d) => isSameDriver(d, driver)) + 1,
+        [driversBoard, driver]
+    );
+
+    const teammate = useMemo(
+        () => driversBoard.find((d) => d?.team === team?.name && !isSameDriver(d, driver)) || null,
+        [driversBoard, team?.name, driver]
+    );
+
+    const teammateRank = useMemo(
+        () => teammate ? driversBoard.findIndex((d) => isSameDriver(d, teammate)) + 1 : null,
+        [driversBoard, teammate]
+    );
+
+    const currentChampion = useMemo(() => {
+        if (!driversBoard.length) return null;
+        return [...driversBoard].sort((a, b) => (b.points ?? 0) - (a.points ?? 0) || (b.wins ?? 0) - (a.wins ?? 0))[0] || null;
+    }, [driversBoard]);
+
+    const dynamicObjectives = useMemo(() => {
+        const list = [];
+        const nextLabel = nextSession
+            ? `${nextSession.gp_name} - ${SESSION_LABEL[nextSession.session_type] ?? nextSession.session_type}`
+            : "Saison terminee";
+
+        list.push({
+            label: "Prochain objectif",
+            value: nextSession ? `Top 10 sur ${nextLabel}` : "Toutes les sessions sont terminees",
+            done: !nextSession,
+        });
+
+        if (teammate) {
+            list.push({
+                label: "Duel interne",
+                value: teammateRank && playerRank
+                    ? `${driver?.surname} P${playerRank} vs ${teammate.surname} P${teammateRank}`
+                    : `Battre ${teammate.surname}`,
+                done: !!playerRank && !!teammateRank && playerRank > 0 && playerRank < teammateRank,
+            });
+        }
+
+        list.push({
+            label: "Tresorerie",
+            value: `${fmtBudget(budget)} disponibles`,
+            done: (budget || 0) >= 12_000_000,
+        });
+
+        return list;
+    }, [nextSession, teammate, teammateRank, playerRank, driver?.surname, budget]);
+
     const isBusy = simLoading || simAllLoading;
 
     // ── Effects ────────────────────────────────────────────────────────────────
@@ -149,9 +230,15 @@ export default function StartSeason() {
             apiFetch("/api/drivers/"),
             apiFetch("/api/season/budget/"),
         ]);
-        setCalendar(Array.isArray(cal) ? cal : []);
-        setDriversBoard(Array.isArray(board) ? board : []);
-        setBudget(budgetRes?.budget ?? 0);
+        const nextCalendarData = Array.isArray(cal) ? cal : [];
+        const nextBoardData = Array.isArray(board) ? board : [];
+        const nextBudget = budgetRes?.budget ?? 0;
+
+        setCalendar(nextCalendarData);
+        setDriversBoard(nextBoardData);
+        setBudget(nextBudget);
+
+        return { calendar: nextCalendarData, board: nextBoardData, budget: nextBudget };
     }
 
     useEffect(() => {
@@ -204,9 +291,32 @@ export default function StartSeason() {
         }
     };
 
-    const sameDriver = (r, d) => {
-        const clean2 = (s) => String(s ?? "").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "");
-        return clean2(r?.surname) === clean2(d?.surname) && Number(r?.number) === Number(d?.number);
+    const sameDriver = isSameDriver;
+
+    const applyBudgetAward = async (results, meta, notify = false) => {
+        const sType = meta?.session_type;
+        const isRace = sType === "GP" || sType === "S";
+        const playerResult = results.find((r) => sameDriver(r, driver)) || null;
+
+        if (!isRace || !playerResult?.position) {
+            return { earned: 0, playerResult };
+        }
+
+        const earned = earnedBudget(playerResult.position, sType);
+        await apiFetch("/api/season/budget/award/", {
+            method: "POST",
+            body: JSON.stringify({ amount: earned }),
+        });
+
+        if (notify) {
+            addToast({
+                message: `P${playerResult.position} · +${fmtBudget(earned)} budget`,
+                type: playerResult.position <= 3 ? "success" : "info",
+                duration: 5000,
+            });
+        }
+
+        return { earned, playerResult };
     };
 
     const simulateOne = async (sessionIndex, force = false, metaOverride = null) => {
@@ -225,26 +335,24 @@ export default function StartSeason() {
             const results = Array.isArray(res?.results) ? res.results : [];
 
             setLastResults(results);
-            setResultsTick((t) => t + 1);
-
-            await refreshAll();
 
             const sType = meta?.session_type;
             const isRace = sType === "GP" || sType === "S";
+            const award = await applyBudgetAward(results, meta, isRace);
+            const recap = buildSessionRecap(results, driver, meta, award.earned);
 
-            if (isRace) {
-                // Award budget
-                const playerResult = results.find((r) => sameDriver(r, driver));
-                if (playerResult?.position) {
-                    const earned = earnedBudget(playerResult.position, sType);
-                    await apiFetch("/api/season/budget/award/", { method: "POST", body: JSON.stringify({ amount: earned }) });
-                    setBudget((b) => b + earned);
-                    addToast({
-                        message: `P${playerResult.position} · +${(earned / 1_000_000).toFixed(0)}M budget`,
-                        type: playerResult.position <= 3 ? "success" : "info",
-                        duration: 5000,
-                    });
-                }
+            setLastBudgetAward(award);
+            setLastSummary(recap);
+            setLastEvents(recap.events);
+
+            const fresh = await refreshAll();
+            const isSeasonNowDone = fresh.calendar.length > 0 && fresh.calendar.every((s) => !!s.is_simulated);
+
+            if (isSeasonNowDone) {
+                setWdcBoard(fresh.board);
+                setWdcError(null);
+                setActiveModal("wdc");
+            } else if (isRace) {
                 setActiveModal("session");
             } else {
                 // Toast for FP/Quali
@@ -252,8 +360,7 @@ export default function StartSeason() {
                 if (sType === "FP") {
                     addToast({ message: `${label} terminé — stats améliorées`, type: "info" });
                 } else {
-                    const playerResult = results.find((r) => sameDriver(r, driver));
-                    const pos = playerResult?.position;
+                    const pos = award.playerResult?.position;
                     const posText = pos ? `P${pos}` : "—";
                     addToast({
                         message: `${label} · ${driver?.surname ?? ""} : ${posText}`,
@@ -277,11 +384,18 @@ export default function StartSeason() {
             ? `/api/simulate/session/${sessionIndex}/?force=1`
             : `/api/simulate/session/${sessionIndex}/`;
         const res = await apiFetch(url, { method: "POST", body: JSON.stringify({}) });
+        const results = Array.isArray(res?.results) ? res.results : [];
+        const award = await applyBudgetAward(results, meta, false);
+        const recap = buildSessionRecap(results, driver, meta, award.earned);
 
-        setLastResults(Array.isArray(res?.results) ? res.results : []);
-        setResultsTick((t) => t + 1);
+        setLastResults(results);
+        setLastBudgetAward(award);
+        setLastSummary(recap);
+        setLastEvents(recap.events);
 
         await refreshAll();
+
+        return { results, meta, award, recap };
     };
 
     const simulateNext = async (force = false) => {
@@ -299,16 +413,36 @@ export default function StartSeason() {
             setError(null);
             setSimAllProgress({ done: 0, total: remaining.length });
             setActiveModal(null);
+            let totalEarned = 0;
 
             for (let i = 0; i < remaining.length; i++) {
                 if (simAllAbortRef.current) break;
                 if (playerStats) setPrevPlayerStats(playerStats);
                 const s = remaining[i];
-                await simulateOneSilent(s.index, force, s);
+                const outcome = await simulateOneSilent(s.index, force, s);
+                totalEarned += outcome?.award?.earned || 0;
                 setSimAllProgress({ done: i + 1, total: remaining.length });
             }
 
-            setActiveModal("session");
+            if (totalEarned > 0) {
+                addToast({
+                    message: `Simulation terminee · +${fmtBudget(totalEarned)} budget`,
+                    type: "success",
+                    duration: 5500,
+                });
+            }
+            const latestCalendar = await apiFetch("/api/season/calendar/");
+            const latestBoard = await apiFetch("/api/drivers/");
+            const finished = Array.isArray(latestCalendar) && latestCalendar.length > 0 && latestCalendar.every((s) => !!s.is_simulated);
+            if (finished) {
+                setCalendar(latestCalendar);
+                setDriversBoard(Array.isArray(latestBoard) ? latestBoard : []);
+                setWdcBoard(Array.isArray(latestBoard) ? latestBoard : []);
+                setWdcError(null);
+                setActiveModal("wdc");
+            } else {
+                setActiveModal("session");
+            }
         } catch (e) {
             console.error(e);
             setError(e?.message || "Erreur simulation totale");
@@ -327,16 +461,36 @@ export default function StartSeason() {
             setError(null);
             setSimAllProgress({ done: 0, total: gpSessions.length });
             setActiveModal(null);
+            let totalEarned = 0;
 
             for (let i = 0; i < gpSessions.length; i++) {
                 if (simAllAbortRef.current) break;
                 if (playerStats) setPrevPlayerStats(playerStats);
                 const s = gpSessions[i];
-                await simulateOneSilent(s.index, false, s);
+                const outcome = await simulateOneSilent(s.index, false, s);
+                totalEarned += outcome?.award?.earned || 0;
                 setSimAllProgress({ done: i + 1, total: gpSessions.length });
             }
 
-            setActiveModal("session");
+            if (totalEarned > 0) {
+                addToast({
+                    message: `${gpName} termine · +${fmtBudget(totalEarned)} budget`,
+                    type: "success",
+                    duration: 5500,
+                });
+            }
+            const latestCalendar = await apiFetch("/api/season/calendar/");
+            const latestBoard = await apiFetch("/api/drivers/");
+            const finished = Array.isArray(latestCalendar) && latestCalendar.length > 0 && latestCalendar.every((s) => !!s.is_simulated);
+            if (finished) {
+                setCalendar(latestCalendar);
+                setDriversBoard(Array.isArray(latestBoard) ? latestBoard : []);
+                setWdcBoard(Array.isArray(latestBoard) ? latestBoard : []);
+                setWdcError(null);
+                setActiveModal("wdc");
+            } else {
+                setActiveModal("session");
+            }
         } catch (e) {
             console.error(e);
             setError(e?.message || "Erreur simulation GP");
@@ -350,11 +504,17 @@ export default function StartSeason() {
             setSimLoading(true);
             setError(null);
 
-            await apiFetch("/api/season/reset/", { method: "POST", body: JSON.stringify({}) });
+            const res = await apiFetch("/api/season/reset/", {
+                method: "POST",
+                body: JSON.stringify({ full: true, advanceSeason: false, keepSeason: true }),
+            });
 
             setCalendar([]);
             setDriversBoard([]);
             setLastResults([]);
+            setLastEvents([]);
+            setLastSummary(null);
+            setLastBudgetAward(null);
             setExpandedGp(null);
             setPrevPlayerStats(null);
             setPlayerStats(null);
@@ -362,9 +522,17 @@ export default function StartSeason() {
             setLastSessionMeta(null);
             setWdcBoard([]);
             setWdcError(null);
-            setResultsTick((t) => t + 1);
 
-            await refreshAll();
+            const refreshed = await refreshAll();
+            const resetDriver = refreshed?.board?.find((d) => isSameDriver(d, driver));
+            if (resetDriver) setDriver(resetDriver);
+            setSim((prev) => ({
+                ...(prev || {}),
+                season: res?.season ?? season,
+                currentRound: 0,
+                lastResults: null,
+                standings: null,
+            }));
         } catch (e) {
             console.error(e);
             setError(e?.message || "Erreur reset");
@@ -377,18 +545,31 @@ export default function StartSeason() {
 
     // ── Render ─────────────────────────────────────────────────────────────────
 
+    if (!team || !driver) {
+        return (
+            <div className="flex-1 flex items-center justify-center p-6">
+                <div className="text-center">
+                    <h1 className="font-f1-display text-2xl font-bold mb-2">Team ou pilote manquant</h1>
+                    <p className="text-f1-silver">Retourne choisir une team puis un pilote.</p>
+                    <Button className="mt-4" onClick={() => navigate("/choose-team")}>
+                        Refaire les choix
+                    </Button>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="flex-1 flex flex-col">
             {seasonDone && (
                 <div className="w-full px-4 md:px-6 lg:px-8 pt-4 md:pt-6 lg:pt-8">
-                    <div className="rounded-2xl border-2 border-f1-yellow/50 bg-f1-yellow/5 p-5 flex flex-col sm:flex-row items-center justify-between gap-4">
-                        <div>
-                            <div className="font-f1-display text-lg font-bold text-f1-yellow">🏆 SAISON {season} TERMINÉE</div>
-                            <div className="text-f1-silver text-sm mt-1">Toutes les sessions ont été simulées.</div>
+                    <div className="relative">
+                        <ChampionStage champion={currentChampion} player={driver} season={season} compact />
+                        <div className="mt-3 flex justify-end">
+                            <Button onClick={() => navigate("/end-of-season")} size="lg">
+                                Voir la saison suivante
+                            </Button>
                         </div>
-                        <Button onClick={() => navigate("/end-of-season")} size="lg">
-                            Voir le classement final
-                        </Button>
                     </div>
                 </div>
             )}
@@ -415,6 +596,7 @@ export default function StartSeason() {
                 totalSessions={totalSessions}
                 simulatedSessions={simulatedSessions}
                 season={season}
+                objectives={dynamicObjectives}
             />
 
             <PlayerCard
@@ -427,7 +609,7 @@ export default function StartSeason() {
                 isBusy={isBusy}
                 driversBoard={driversBoard}
                 wdcLoading={wdcLoading}
-                onReset={resetSeason}
+                onReset={() => setActiveModal("reset-season")}
                 onOpenWdc={openWdc}
                 budget={budget}
             />
@@ -440,6 +622,9 @@ export default function StartSeason() {
                 sessionMeta={lastSessionMeta}
                 playerStats={playerStats}
                 prevPlayerStats={prevPlayerStats}
+                summary={lastSummary}
+                events={lastEvents}
+                budgetAward={lastBudgetAward}
             />
 
             <WdcModal
@@ -447,10 +632,24 @@ export default function StartSeason() {
                 onClose={() => setActiveModal(null)}
                 board={wdcBoard}
                 player={driver}
+                season={season}
                 loading={wdcLoading}
                 error={wdcError}
                 onReload={openWdc}
             />
+
+            <ConfirmModal
+                open={activeModal === "reset-season"}
+                title="Reset de la saison"
+                danger
+                confirmLabel="Reset saison"
+                loading={simLoading}
+                onClose={() => setActiveModal(null)}
+                onConfirm={resetSeason}
+            >
+                Tu vas remettre la saison {season} a zero pour cette session locale. Le calendrier,
+                les resultats, le budget et la progression sportive seront reinitialises.
+            </ConfirmModal>
             </div>
         </div>
     );

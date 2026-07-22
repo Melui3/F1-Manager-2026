@@ -33,7 +33,7 @@ export default function Button({
     ...props
 }) {
     const classes = [
-        "font-f1 font-semibold rounded-xl transition-all duration-150",
+        "f1-motion-button font-f1 font-semibold rounded-xl transition-all duration-150",
         "inline-flex items-center justify-center cursor-pointer",
         "disabled:opacity-50 disabled:cursor-not-allowed",
         VARIANTS[variant] ?? VARIANTS.primary,

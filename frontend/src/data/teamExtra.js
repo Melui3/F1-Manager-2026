@@ -11,7 +11,7 @@ export const TEAM_EXTRA = {
         debutF1: 2005,
         constructorTitles: 6,
         driverTitles: 7,
-        highlight: "Machine à gagner — efficacité brute.",
+        highlight: "Equipe de pointe, forte en performance pure, ideale si tu veux viser vite les victoires.",
         notes: ["Titres constructeurs: 2010–2013, 2022–2023"],
     },
 
@@ -23,7 +23,7 @@ export const TEAM_EXTRA = {
         debutF1: 1950,
         constructorTitles: 16,
         driverTitles: 15,
-        highlight: "Mythe absolu — pression maximum.",
+        highlight: "Ecurie historique avec gros potentiel, mais chaque resultat est attendu au plus haut niveau.",
         notes: ["Équipe la plus titrée côté constructeurs (record)."],
     },
 
@@ -35,7 +35,7 @@ export const TEAM_EXTRA = {
         debutF1: 1954,
         constructorTitles: 8,
         driverTitles: 9,
-        highlight: "Excellence et structure — domination moderne.",
+        highlight: "Structure tres solide, bon choix pour construire une saison reguliere et efficace.",
         notes: ["Série de titres constructeurs 2014–2021 (8 d’affilée)."],
     },
 
@@ -47,7 +47,7 @@ export const TEAM_EXTRA = {
         debutF1: 1966,
         constructorTitles: 10,
         driverTitles: 12,
-        highlight: "Renaissance — vitesse + discipline.",
+        highlight: "Package rapide et stable, parfait pour jouer le haut de tableau avec une marge de progression.",
         notes: ["Titres constructeurs listés incluant 2024 et 2025."],
     },
 
@@ -59,7 +59,7 @@ export const TEAM_EXTRA = {
         debutF1: 1959,
         constructorTitles: 0,
         driverTitles: 0,
-        highlight: "Projet ambitieux — gros build 2026.",
+        highlight: "Projet ambitieux centre sur le developpement, interessant pour une progression sur la duree.",
         notes: ["Honda devient motoriste exclusif en 2026."],
     },
 
@@ -71,7 +71,7 @@ export const TEAM_EXTRA = {
         debutF1: 1977,
         constructorTitles: 2,
         driverTitles: 2,
-        highlight: "Potentiel énorme — stabilité à trouver.",
+        highlight: "Equipe a fort potentiel, mais qui demande de stabiliser les performances course apres course.",
         notes: ["Renault quitte la F1 comme motoriste fin 2025, Alpine passe chez Mercedes en 2026."],
     },
 
@@ -83,7 +83,7 @@ export const TEAM_EXTRA = {
         debutF1: 2026,
         constructorTitles: 0,
         driverTitles: 0,
-        highlight: "Usine neuve — construction long terme.",
+        highlight: "Nouvelle structure officielle, ideale pour partir d'une base neuve et construire patiemment.",
         notes: ["Audi arrive en tant qu’équipe officielle (héritage Sauber)."],
     },
 
@@ -95,7 +95,7 @@ export const TEAM_EXTRA = {
         debutF1: 2026,
         constructorTitles: 0,
         driverTitles: 0,
-        highlight: "Nouvelle team — grosse vitrine 2026.",
+        highlight: "Nouvelle equipe americaine, bon defi si tu veux transformer un projet debutant en outsider.",
         notes: ["Nouvelle équipe: 11e team sur la grille en 2026."],
     },
 
@@ -107,7 +107,7 @@ export const TEAM_EXTRA = {
         debutF1: 2016,
         constructorTitles: 0,
         driverTitles: 0,
-        highlight: "Pragmatique — capable de coups malins.",
+        highlight: "Ecurie pragmatique, efficace pour chercher des opportunites avec un budget maitrise.",
         notes: ["Sponsor-titre Toyota Gazoo Racing en 2026 (dénomination)."],
     },
 
@@ -119,7 +119,7 @@ export const TEAM_EXTRA = {
         debutF1: 1977,
         constructorTitles: 9,
         driverTitles: 7,
-        highlight: "Géant historique — rebuild sérieux.",
+        highlight: "Grand nom en reconstruction, bon choix pour viser une remontee progressive au classement.",
         notes: ["3e équipe la plus titrée constructeurs (9)."],
     },
 
@@ -131,7 +131,7 @@ export const TEAM_EXTRA = {
         debutF1: 2006,
         constructorTitles: 0,
         driverTitles: 0,
-        highlight: "Équipe sœur — développement & opportunités.",
+        highlight: "Equipe agile et formatrice, adaptee aux paris jeunes pilotes et aux coups strategiques.",
         notes: ["Équipe sœur Red Bull (même PU RBPT Ford en 2026)."],
     },
 };

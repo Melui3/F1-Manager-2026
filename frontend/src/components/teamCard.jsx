@@ -1,4 +1,5 @@
 import { useState } from "react";
+import FlagBadge from "./ui/FlagBadge";
 import Button from "./ui/Button";
 
 const TEAM_KEY_MAP = {
@@ -29,6 +30,34 @@ const TEAM_STYLE = {
     "Visa Cash App Racing Bulls F1 Team": "border-indigo-400/60 shadow-indigo-400/20",
 };
 
+const TEAM_LOGO_BG = {
+    "Oracle Red Bull Racing": "from-blue-950/70 via-f1-dark to-yellow-950/30",
+    "Scuderia Ferrari HP": "from-red-950/70 via-f1-dark to-yellow-950/20",
+    "Mercedes-AMG Petronas Formula One Team": "from-emerald-950/60 via-f1-dark to-slate-900",
+    "McLaren Mastercard Formula 1 Team": "from-orange-950/70 via-f1-dark to-slate-900",
+    "Aston Martin Aramco Formula One Team": "from-emerald-950/70 via-f1-dark to-lime-950/20",
+    "BWT Alpine F1 Team": "from-sky-950/70 via-f1-dark to-pink-950/20",
+    "Audi F1 Team (Revolut)": "from-zinc-700/40 via-f1-dark to-red-950/20",
+    "Cadillac Formula One Team": "from-yellow-950/50 via-f1-dark to-blue-950/30",
+    "TGR Hass F1 Team": "from-zinc-800/60 via-f1-dark to-red-950/20",
+    "Atlassian Williams Racing": "from-sky-950/70 via-f1-dark to-blue-950/40",
+    "Visa Cash App Racing Bulls F1 Team": "from-indigo-950/70 via-f1-dark to-sky-950/30",
+};
+
+const TEAM_ACCENT = {
+    "Oracle Red Bull Racing": "#3671ff",
+    "Scuderia Ferrari HP": "#e10600",
+    "Mercedes-AMG Petronas Formula One Team": "#00d2be",
+    "McLaren Mastercard Formula 1 Team": "#ff8700",
+    "Aston Martin Aramco Formula One Team": "#006f62",
+    "BWT Alpine F1 Team": "#2293d1",
+    "Audi F1 Team (Revolut)": "#d7d7d7",
+    "Cadillac Formula One Team": "#d6b45f",
+    "TGR Hass F1 Team": "#b6babd",
+    "Atlassian Williams Racing": "#37bedd",
+    "Visa Cash App Racing Bulls F1 Team": "#5e8cff",
+};
+
 function Badge({ children }) {
     return (
         <span className="text-[11px] px-2 py-0.5 rounded-full border border-f1-border bg-f1-dark/60 text-f1-silver">
@@ -53,29 +82,50 @@ export default function TeamCard({ team, isSelected, onSelect, drivers = [], ext
     const teamName = team?.name ?? "Team";
     const teamKey = TEAM_KEY_MAP[teamName] || team?.team_key || null;
     const style = TEAM_STYLE[teamName] || "border-f1-border shadow-black/0";
+    const accent = TEAM_ACCENT[teamName] || "#e10600";
     const logoSrc = teamKey ? `${base}teams/${teamKey}.avif` : null;
 
     const shortName = extra?.shortName ?? teamName;
     const debut = extra?.debutF1 ?? "—";
     const cstr = extra?.constructorTitles ?? 0;
+    const selectedLabel = isSelected ? "Selectionnee" : "Selectionner";
+
+    const handleKeyDown = (e) => {
+        if (e.target !== e.currentTarget) return;
+        if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onSelect?.();
+        }
+    };
 
     return (
         <div
+            role="button"
+            tabIndex={0}
+            aria-pressed={isSelected}
+            aria-label={`${selectedLabel} ${shortName}`}
             onClick={onSelect}
+            onKeyDown={handleKeyDown}
+            style={{
+                "--team-accent": accent,
+                "--team-glow": `${accent}40`,
+                "--team-soft": `${accent}24`,
+            }}
             className={[
-                "rounded-2xl overflow-hidden border-2 bg-f1-surface cursor-pointer transition-all duration-200",
+                "f1-team-card rounded-2xl overflow-hidden border-2 bg-f1-surface cursor-pointer transition-all duration-200 outline-none f1-motion-card",
+                "focus-visible:ring-2 focus-visible:ring-f1-red focus-visible:ring-offset-2 focus-visible:ring-offset-f1-dark",
                 isSelected
-                    ? `${style} shadow-2xl bg-f1-surface-2`
-                    : "border-f1-border hover:shadow-lg hover:border-f1-muted",
+                    ? `is-selected ${style} bg-f1-surface-2`
+                    : "border-f1-border",
             ].join(" ")}
         >
             {/* Logo header */}
-            <div className="w-full h-32 bg-f1-dark flex items-center justify-center">
+            <div className={`relative z-10 w-full h-36 bg-gradient-to-br ${TEAM_LOGO_BG[teamName] || "from-f1-surface via-f1-dark to-f1-dark"} flex items-center justify-center`}>
                 {logoSrc ? (
                     <img
                         src={logoSrc}
                         alt={teamName}
-                        className="h-20 w-20 object-contain"
+                        className="h-24 w-24 object-contain drop-shadow-xl"
                         onError={(e) => e.currentTarget.remove()}
                     />
                 ) : (
@@ -83,9 +133,16 @@ export default function TeamCard({ team, isSelected, onSelect, drivers = [], ext
                 )}
             </div>
 
-            <div className="p-4">
-                <div className="font-f1-display font-bold uppercase text-base leading-tight text-f1-white">
-                    {shortName}
+            <div className="relative z-10 p-4">
+                <div className="flex items-start justify-between gap-2">
+                    <div className="font-f1-display font-bold uppercase text-base leading-tight text-f1-white">
+                        {shortName}
+                    </div>
+                    {isSelected && (
+                        <span className="rounded-full border border-f1-red/40 bg-f1-red/15 px-2 py-0.5 text-[10px] font-bold text-f1-red">
+                            Choisie
+                        </span>
+                    )}
                 </div>
 
                 <div className="mt-2 flex flex-wrap gap-1.5">
@@ -96,7 +153,7 @@ export default function TeamCard({ team, isSelected, onSelect, drivers = [], ext
 
                 {extra?.highlight && (
                     <div className="mt-3 text-sm text-f1-silver leading-snug">
-                        <span className="text-f1-muted">À retenir : </span>
+                        <span className="text-f1-muted">Résumé : </span>
                         {extra.highlight}
                     </div>
                 )}
@@ -141,7 +198,7 @@ export default function TeamCard({ team, isSelected, onSelect, drivers = [], ext
                             </div>
                         ) : (
                             <div className="text-sm text-f1-silver">
-                                Pas d'infos manuelles pour cette team. (Ajoute-la dans <b>teamExtra.js</b>)
+                                Informations detaillees indisponibles pour cette ecurie.
                             </div>
                         )}
 
@@ -154,7 +211,8 @@ export default function TeamCard({ team, isSelected, onSelect, drivers = [], ext
                                         key={`${d.surname}_${d.number}`}
                                         className="flex items-center justify-between rounded-lg bg-f1-surface border border-f1-border px-3 py-2"
                                     >
-                                        <div className="text-sm text-f1-white font-semibold">
+                                        <div className="text-sm text-f1-white font-semibold flex items-center gap-2 min-w-0">
+                                            <FlagBadge country={d.country} compact />
                                             {d.name} {d.surname}
                                         </div>
                                         <div className="text-sm text-f1-silver font-f1-display">#{d.number}</div>

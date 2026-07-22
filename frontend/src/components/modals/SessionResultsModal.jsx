@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import Modal from "./Modal";
-import { SESSION_LABEL, COUNTRY_FLAG, PODIUM_STYLE, TEAM_COLOR } from "../../data/labels";
+import { SESSION_LABEL, PODIUM_STYLE, TEAM_COLOR } from "../../data/labels";
+import FlagBadge from "../ui/FlagBadge";
 
 const clean = (s) =>
     String(s ?? "")
@@ -13,6 +14,11 @@ const clean = (s) =>
 const num = (x) => {
     const n = Number(String(x ?? "").trim());
     return Number.isFinite(n) ? n : null;
+};
+
+const fmtMoney = (value) => {
+    const millions = (Number(value) || 0) / 1_000_000;
+    return `${millions >= 10 ? Math.round(millions) : millions.toFixed(1)}M`;
 };
 
 const sameDriver = (row, player) => {
@@ -31,10 +37,6 @@ const sameDriver = (row, player) => {
 
     return !!rowSurname && !!playerSurname && rowSurname === playerSurname && rowNum !== null && rowNum === playerNum;
 };
-
-function flag(country) {
-    return COUNTRY_FLAG[country] ?? "";
-}
 
 // ─── Stats grid ───────────────────────────────────────────────────────────────
 
@@ -108,7 +110,7 @@ function ResultRow({ r, isPlayer }) {
             )}
 
             {/* Flag */}
-            {r.country && <span className="text-base">{flag(r.country)}</span>}
+            {r.country && <FlagBadge country={r.country} compact />}
 
             {/* Team color dot */}
             <span className={`inline-block w-2 h-2 rounded-full shrink-0 ${teamColor?.dot ?? "bg-f1-muted"}`} />
@@ -145,9 +147,10 @@ export default function SessionResultsModal({
     sessionMeta,
     playerStats,
     prevPlayerStats,
+    summary,
+    events = [],
+    budgetAward = null,
 }) {
-    const safeResults = Array.isArray(results) ? results : [];
-
     const sessionLabel = sessionMeta?.session_type
         ? (SESSION_LABEL[sessionMeta.session_type] ?? sessionMeta.session_type)
         : null;
@@ -157,12 +160,12 @@ export default function SessionResultsModal({
         : "Résultats de session";
 
     const sorted = useMemo(() => {
-        const arr = [...safeResults];
+        const arr = Array.isArray(results) ? [...results] : [];
         const hasPos = arr.some((r) => r?.position != null);
         if (!hasPos) return arr.map((r, idx) => ({ ...r, position: idx + 1 }));
         arr.sort((a, b) => (a?.position ?? 999) - (b?.position ?? 999));
         return arr;
-    }, [safeResults]);
+    }, [results]);
 
     const playerRow = useMemo(
         () => sorted.find((r) => sameDriver(r, player)) || null,
@@ -187,6 +190,42 @@ export default function SessionResultsModal({
                 </div>
             }
         >
+            {(summary || events.length > 0 || budgetAward?.earned > 0) && (
+                <div className="rounded-xl border border-f1-red/25 bg-f1-red/5 p-4 mb-4">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                        <div>
+                            <div className="text-[10px] text-f1-muted uppercase tracking-wider mb-1">Resume express</div>
+                            <div className="font-f1-display text-base font-bold text-f1-white">
+                                {summary?.title || "Session terminee"}
+                            </div>
+                            {summary?.winner && (
+                                <div className="text-sm text-f1-silver mt-1">
+                                    Vainqueur : <span className="text-f1-white font-semibold">{summary.winner.name} {summary.winner.surname}</span>
+                                </div>
+                            )}
+                        </div>
+                        {budgetAward?.earned > 0 && (
+                            <div className="rounded-lg border border-f1-yellow/30 bg-f1-yellow/10 px-3 py-2 text-right">
+                                <div className="text-[10px] uppercase tracking-wider text-f1-muted">Budget gagne</div>
+                                <div className="font-f1-display text-lg font-black text-f1-yellow">
+                                    +{fmtMoney(budgetAward.earned)}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {events.length > 0 && (
+                        <div className="mt-3 grid gap-1.5">
+                            {events.slice(0, 4).map((event, idx) => (
+                                <div key={`${event}-${idx}`} className="text-sm text-f1-silver">
+                                    <span className="text-f1-red font-bold mr-1">•</span>{event}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
+
             {/* Ton résultat */}
             {playerRow && (
                 <div className={`rounded-xl border p-4 mb-4 ${podiumStyle ? podiumStyle.ring : "border-f1-red/40 bg-f1-red/5"}`}>

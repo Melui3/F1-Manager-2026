@@ -1,6 +1,8 @@
 import { useMemo } from "react";
 import Modal from "./Modal";
-import { PODIUM_STYLE, COUNTRY_FLAG, TEAM_COLOR } from "../../data/labels";
+import { PODIUM_STYLE, TEAM_COLOR } from "../../data/labels";
+import FlagBadge from "../ui/FlagBadge";
+import ChampionStage from "../season/ChampionStage";
 
 const clean = (s) =>
     String(s ?? "")
@@ -22,10 +24,6 @@ const isSameDriver = (a, b) => {
     const bNum = getNumber(b?.number ?? b?.driver_number);
     return !!aSurname && !!bSurname && aSurname === bSurname && aNum !== null && aNum === bNum;
 };
-
-function flag(country) {
-    return COUNTRY_FLAG[country] ?? "";
-}
 
 function DriverRow({ d, rank, isPlayer }) {
     const podium = PODIUM_STYLE[rank];
@@ -52,7 +50,7 @@ function DriverRow({ d, rank, isPlayer }) {
             )}
 
             {/* Flag */}
-            {d?.country && <span className="text-base">{flag(d.country)}</span>}
+            {d?.country && <FlagBadge country={d.country} compact />}
 
             {/* Team dot */}
             <span className={`inline-block w-2 h-2 rounded-full shrink-0 ${teamColor?.dot ?? "bg-f1-muted"}`} />
@@ -79,13 +77,9 @@ function DriverRow({ d, rank, isPlayer }) {
     );
 }
 
-export default function WdcModal({ open, onClose, board, player, loading = false, error = null, onReload }) {
-    if (!open) return null;
-
-    const safeBoard = Array.isArray(board) ? board : [];
-
+export default function WdcModal({ open, onClose, board, player, season = null, loading = false, error = null, onReload }) {
     const sorted = useMemo(() => {
-        const arr = [...safeBoard];
+        const arr = Array.isArray(board) ? [...board] : [];
         arr.sort((a, b) => {
             const pa = Number(a?.points ?? 0);
             const pb = Number(b?.points ?? 0);
@@ -98,10 +92,11 @@ export default function WdcModal({ open, onClose, board, player, loading = false
             return pdb - pda;
         });
         return arr;
-    }, [safeBoard]);
+    }, [board]);
 
     const champion = sorted[0] || null;
-    const championPodium = PODIUM_STYLE[1];
+
+    if (!open) return null;
 
     return (
         <Modal
@@ -141,38 +136,16 @@ export default function WdcModal({ open, onClose, board, player, loading = false
                 <div className="rounded-xl border border-f1-red/40 bg-f1-red/5 p-4 text-sm">
                     <div className="font-bold text-f1-white mb-1">Erreur</div>
                     <div className="text-f1-silver">{error}</div>
-                    <div className="text-f1-muted text-xs mt-2">Clique "Recharger". Si ça persiste, l'API renvoie une erreur.</div>
+                    <div className="text-f1-muted text-xs mt-2">Clique "Recharger". Si ça persiste, la session locale n'a peut-être pas encore de données valides.</div>
                 </div>
             ) : sorted.length === 0 ? (
                 <div className="text-f1-silver text-sm">
                     <div className="font-bold mb-1 text-f1-white">Aucun pilote reçu.</div>
-                    <div>Soit la requête a renvoyé une liste vide, soit le backend n'a pas de données en base. Clique "Recharger" pour retenter.</div>
+                    <div>Aucun classement n'est encore disponible dans cette session. Simule une course ou clique "Recharger" pour retenter.</div>
                 </div>
             ) : (
                 <div className="flex flex-col gap-4">
-                    {/* Champion banner */}
-                    {champion && (
-                        <div className={`rounded-xl border p-4 ${championPodium.ring}`}>
-                            <div className="text-[10px] text-f1-muted uppercase tracking-wider mb-2">Champion du monde</div>
-                            <div className="flex items-center justify-between gap-3">
-                                <div className="flex items-center gap-3">
-                                    <span className={`font-f1-display text-3xl font-bold ${championPodium.text}`}>
-                                        {championPodium.rank}
-                                    </span>
-                                    <div>
-                                        <div className={`font-f1-display text-lg font-bold ${championPodium.text}`}>
-                                            {champion.name} <span className="uppercase">{champion.surname}</span>
-                                        </div>
-                                        <div className="text-f1-muted text-sm">{champion.team}</div>
-                                    </div>
-                                </div>
-                                <div className="font-f1-display font-bold text-2xl text-f1-white whitespace-nowrap">
-                                    {Number(champion.points ?? 0)}
-                                    <span className="text-f1-muted text-base font-normal ml-1">pts</span>
-                                </div>
-                            </div>
-                        </div>
-                    )}
+                    {champion && <ChampionStage champion={champion} player={player} season={season} compact />}
 
                     {/* Full standings */}
                     <div className="flex flex-col gap-1.5">

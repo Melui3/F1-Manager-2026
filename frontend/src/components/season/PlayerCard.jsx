@@ -1,7 +1,8 @@
 import { useNavigate } from "react-router-dom";
 import { useGame } from "../../context/GameContext";
 import Button from "../ui/Button";
-import { TEAM_COLOR, PODIUM_STYLE, COUNTRY_FLAG } from "../../data/labels";
+import { TEAM_COLOR, PODIUM_STYLE } from "../../data/labels";
+import FlagBadge from "../ui/FlagBadge";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -119,9 +120,7 @@ function LeaderRow({ d, rank, isPlayer }) {
                 <span className="font-f1-display text-xs text-f1-muted w-5 text-center">{rank}</span>
             )}
 
-            {d?.country && (
-                <span className="text-sm">{COUNTRY_FLAG[d.country] ?? ""}</span>
-            )}
+            {d?.country && <FlagBadge country={d.country} compact />}
 
             <span className={`inline-block w-1.5 h-1.5 rounded-full shrink-0 ${teamColor?.dot ?? "bg-f1-muted"}`} />
 
@@ -193,6 +192,11 @@ export default function PlayerCard({
                         {driver.name} {driver.surname}
                     </div>
                     <div className="font-f1-display text-f1-red text-sm mt-0.5">#{driver.number}</div>
+                    {driver.country && (
+                        <div className="mt-2 flex justify-center">
+                            <FlagBadge country={driver.country} />
+                        </div>
+                    )}
                 </div>
 
                 <div className="flex items-center gap-2 text-sm text-f1-silver">

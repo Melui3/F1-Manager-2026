@@ -1,6 +1,7 @@
 import Button from "../ui/Button";
 import Alert from "../ui/Alert";
-import { SESSION_LABEL, PODIUM_STYLE, GP_FLAG, CIRCUIT_ICON } from "../../data/labels";
+import { SESSION_LABEL, CIRCUIT_ICON, CIRCUIT_TYPE_META, GP_CIRCUIT_SUMMARY } from "../../data/labels";
+import FlagBadge from "../ui/FlagBadge";
 
 // ─── GP status helpers ────────────────────────────────────────────────────────
 
@@ -62,13 +63,17 @@ function SeasonProgress({ total, done }) {
 
 function SessionRow({ s, isBusy, onSimulate, onForce }) {
     const sessionLabel = SESSION_LABEL[s.session_type] ?? s.session_type;
+    const circuitMeta = CIRCUIT_TYPE_META[s.circuit_type] || { label: s.circuit_type, description: "" };
+    const circuitIcon = CIRCUIT_ICON[s.circuit_type] ?? "";
 
     return (
-        <div className="rounded-xl bg-f1-surface/60 border border-f1-border px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="f1-soft-panel rounded-xl px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="text-sm">
                 <div className="font-semibold text-f1-white">
-                    {sessionLabel}{" "}
-                    <span className="text-f1-muted font-normal text-xs">({s.circuit_type})</span>
+                    {sessionLabel}
+                    <span className="ml-2 text-f1-muted font-normal text-xs">
+                        {circuitIcon} {circuitMeta.label}
+                    </span>
                 </div>
                 <div className="text-f1-silver text-xs mt-0.5">
                     {s.date ?? "—"}{" "}
@@ -99,6 +104,10 @@ function GpCard({ gpName, sessions, expanded, onToggle, isBusy, onSimulate, onFo
     const ui = statusUI(status);
     const gpDate = sessions?.[0]?.date ?? "—";
     const circuit = sessions?.[0]?.circuit_name ?? "—";
+    const circuitType = sessions?.[0]?.circuit_type;
+    const circuitMeta = CIRCUIT_TYPE_META[circuitType] || { label: circuitType || "Circuit", description: "" };
+    const circuitIcon = CIRCUIT_ICON[circuitType] ?? "";
+    const circuitSummary = GP_CIRCUIT_SUMMARY[gpName] || "Résumé circuit indisponible pour ce Grand Prix.";
     const remaining = sessions.filter((s) => !s.is_simulated).length;
 
     return (
@@ -106,12 +115,12 @@ function GpCard({ gpName, sessions, expanded, onToggle, isBusy, onSimulate, onFo
             <div className="flex items-center justify-between gap-3">
                 <div className="flex flex-col gap-1 flex-1 cursor-pointer select-none" onClick={onToggle}>
                     <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-lg">{GP_FLAG[gpName] ?? "🏁"}</span>
+                        <FlagBadge gpName={gpName} compact />
                         <span className="font-f1-display font-bold text-base text-f1-white">{gpName}</span>
                         <span className={`text-xs px-2 py-0.5 rounded-full border ${ui.pill}`}>{ui.label}</span>
-                        {sessions?.[0]?.circuit_type && (
-                            <span className="text-sm" title={sessions[0].circuit_type}>
-                                {CIRCUIT_ICON[sessions[0].circuit_type] ?? ""}
+                        {circuitType && (
+                            <span className="text-xs px-2 py-0.5 rounded-full border border-f1-border bg-f1-dark/50 text-f1-silver" title={circuitMeta.description}>
+                                {circuitIcon} {circuitMeta.label}
                             </span>
                         )}
                     </div>
@@ -135,6 +144,18 @@ function GpCard({ gpName, sessions, expanded, onToggle, isBusy, onSimulate, onFo
 
             {expanded && (
                 <div className="mt-4 flex flex-col gap-2 f1-fade-in">
+                    <div className="rounded-xl border border-f1-border bg-f1-dark/55 p-4">
+                        <div className="font-f1-display text-xs font-bold uppercase tracking-widest text-f1-red mb-2">
+                            Resume du circuit
+                        </div>
+                        <p className="text-sm text-f1-silver leading-relaxed">{circuitSummary}</p>
+                        <div className="mt-3 text-xs text-f1-muted">
+                            <div className="rounded-lg border border-f1-border bg-f1-surface/50 p-2">
+                                <span className="text-f1-silver font-semibold">Icone :</span>{" "}
+                                {circuitIcon} {circuitMeta.label} - {circuitMeta.description}
+                            </div>
+                        </div>
+                    </div>
                     {sessions.map((s) => (
                         <SessionRow
                             key={s.index}
@@ -174,6 +195,7 @@ export default function CalendarSection({
     totalSessions,
     simulatedSessions,
     season,
+    objectives = [],
 }) {
     return (
         <section className="flex-1 flex flex-col gap-5">
@@ -186,6 +208,10 @@ export default function CalendarSection({
                         <h1 className="font-f1-display text-2xl md:text-3xl font-bold">
                             CALENDRIER <span className="text-f1-red">{season ?? 2026}</span>
                         </h1>
+                        <p className="text-sm text-f1-silver mt-2 leading-relaxed">
+                            C'est le centre de simulation de ta session locale. Chaque bouton modifie uniquement
+                            la sauvegarde du manager actif : resultats, budget, progression pilote et historique.
+                        </p>
 
                         <div className="mt-4 rounded-xl border border-f1-border bg-f1-dark/60 p-4">
                             <h2 className="font-f1-display text-xs font-bold text-f1-white mb-2 tracking-wider uppercase">
@@ -199,6 +225,27 @@ export default function CalendarSection({
                                 <li>• <b className="text-f1-white">Force</b> resimule même si déjà simulé.</li>
                             </ul>
                         </div>
+
+                        {objectives.length > 0 && (
+                            <div className="mt-4 grid md:grid-cols-3 gap-2">
+                                {objectives.map((objective) => (
+                                    <div
+                                        key={objective.label}
+                                        className={[
+                                            "rounded-xl border px-3 py-2.5 text-xs transition-colors",
+                                            objective.done
+                                                ? "border-emerald-500/30 bg-emerald-500/10"
+                                                : "border-f1-border bg-f1-dark/50",
+                                        ].join(" ")}
+                                    >
+                                        <div className={objective.done ? "font-bold text-emerald-400" : "font-bold text-f1-white"}>
+                                            {objective.label}
+                                        </div>
+                                        <div className="text-f1-silver mt-1 leading-snug">{objective.value}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
 
                     {/* Sim buttons */}
@@ -251,7 +298,9 @@ export default function CalendarSection({
                 {nextSession && (
                     <div className="mt-4 text-xs text-f1-muted">
                         Prochaine session :{" "}
-                        <span className="text-f1-silver font-semibold">{nextSession.gp_name}</span>
+                        <span className="inline-flex items-center gap-2 text-f1-silver font-semibold">
+                            <FlagBadge gpName={nextSession.gp_name} compact /> {nextSession.gp_name}
+                        </span>
                         {" "}• <span className="text-f1-white">{SESSION_LABEL[nextSession.session_type] ?? nextSession.session_type}</span>
                     </div>
                 )}
@@ -265,16 +314,16 @@ export default function CalendarSection({
             )}
 
             {/* Calendar list */}
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-3 f1-stagger">
                 {loading ? (
                     <div className="flex items-center gap-3 text-f1-silver px-1">
                         <span className="f1-spinner" /> Chargement…
                     </div>
                 ) : gpNames.length === 0 ? (
                     <div className="bg-f1-surface border border-f1-border rounded-2xl p-5 text-f1-silver text-sm">
-                        Aucun GP reçu depuis l'API.
+                        Aucun Grand Prix disponible dans cette session.
                         <div className="text-xs text-f1-muted mt-2">
-                            Vérifie <b>/api/season/calendar/</b>
+                            Reviens a l'accueil pour reprendre une autre session ou cree une nouvelle partie.
                         </div>
                     </div>
                 ) : (

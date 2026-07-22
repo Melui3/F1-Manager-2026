@@ -1,12 +1,19 @@
 // src/services/api.js
 
 import { mockDispatch, mockLogin as _mockLogin } from "./mockApi.js";
+import {
+    clearActiveSessionData,
+    exportSessionPayload,
+    getScopedStorageKey,
+    importSessionPayload,
+} from "./sessionStore.js";
 
-const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === "true";
 const API_BASE  = (import.meta.env.VITE_API_BASE  || "").replace(/\/$/, "");
+const DEMO_FLAG = import.meta.env.VITE_DEMO_MODE;
+export const CLIENT_ONLY_MODE = DEMO_FLAG === "true" || (!API_BASE && DEMO_FLAG !== "false");
 
 // Compat: si tu utilises mon GameContext persistant
-const CTX_USER_KEY = "f1m26_user"; // contient { accessToken, refreshToken } chez toi
+const CTX_USER_KEY = "f1m26_user"; // legacy fallback
 
 // Compat: ton ancien système
 const LEGACY_ACCESS = "access_token";
@@ -26,7 +33,8 @@ function safeParse(raw) {
 }
 
 function getCtxTokens() {
-    const u = safeParse(localStorage.getItem(CTX_USER_KEY));
+    const u = safeParse(localStorage.getItem(getScopedStorageKey("user")))
+        || safeParse(localStorage.getItem(CTX_USER_KEY));
     return {
         access: u?.accessToken || null,
         refresh: u?.refreshToken || null,
@@ -34,13 +42,14 @@ function getCtxTokens() {
 }
 
 function setCtxTokens({ access, refresh }) {
-    const u = safeParse(localStorage.getItem(CTX_USER_KEY)) || {};
+    const userKey = getScopedStorageKey("user");
+    const u = safeParse(localStorage.getItem(userKey)) || {};
     const next = {
         ...u,
         accessToken: access ?? u.accessToken ?? null,
         refreshToken: refresh ?? u.refreshToken ?? null,
     };
-    localStorage.setItem(CTX_USER_KEY, JSON.stringify(next));
+    localStorage.setItem(userKey, JSON.stringify(next));
 }
 
 export function getAccessToken() {
@@ -73,10 +82,11 @@ export function clearTokens() {
     localStorage.removeItem(LEGACY_REFRESH);
 
     // clear in f1m26_user but keep other fields (username/avatar)
-    const u = safeParse(localStorage.getItem(CTX_USER_KEY));
+    const userKey = getScopedStorageKey("user");
+    const u = safeParse(localStorage.getItem(userKey));
     if (u) {
         localStorage.setItem(
-            CTX_USER_KEY,
+            userKey,
             JSON.stringify({ ...u, accessToken: null, refreshToken: null })
         );
     }
@@ -122,7 +132,7 @@ async function refreshAccessToken() {
  * options.authToken : si tu veux forcer un token spécifique (optionnel)
  */
 export async function apiFetch(path, options = {}) {
-    if (DEMO_MODE) return mockDispatch(path, options);
+    if (CLIENT_ONLY_MODE) return mockDispatch(path, options);
 
     const url = joinUrl(API_BASE, path);
 
@@ -161,7 +171,7 @@ export async function apiFetch(path, options = {}) {
 }
 
 export async function login(username, password) {
-    if (DEMO_MODE) return _mockLogin(username);
+    if (CLIENT_ONLY_MODE) return _mockLogin(username);
 
     const url = joinUrl(API_BASE, "/api/auth/login/");
     const res = await fetch(url, {
@@ -187,4 +197,16 @@ export async function login(username, password) {
 
 export function logout() {
     clearTokens();
+}
+
+export function exportLocalSave() {
+    return exportSessionPayload();
+}
+
+export function importLocalSave(payload) {
+    return importSessionPayload(payload);
+}
+
+export function clearLocalSave() {
+    clearActiveSessionData();
 }

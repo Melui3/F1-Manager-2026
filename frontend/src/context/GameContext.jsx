@@ -1,18 +1,30 @@
-// src/context/GameContext.jsx
-import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import {
+    activateSessionProfile,
+    clearActiveSessionSelection,
+    getActiveSessionId,
+    getSessionProfiles,
+    getScopedStorageKey,
+    touchSessionProfile,
+    updateActiveSessionMeta,
+} from "../services/sessionStore";
 
 const GameContext = createContext(null);
 
-// 2 clés distinctes = plus propre
-const STORAGE_USER = "f1m26_user";
-const STORAGE_GAME = "f1m26_game";
-
 const base = import.meta.env.BASE_URL || "/";
 
-// Helpers
+function defaultSim() {
+    return {
+        season: 2026,
+        currentRound: 0,
+        lastResults: null,
+        standings: null,
+    };
+}
+
 function avatarUrlFromKey(key) {
     if (!key) return null;
-    return `${base}avatars/${key}.jpg`; // change en .png si besoin
+    return `${base}avatars/${key}.jpg`;
 }
 
 function normalizeUrl(url) {
@@ -32,63 +44,72 @@ function safeParse(raw) {
 
 export function GameProvider({ children }) {
     const [ready, setReady] = useState(false);
+    const [activeSessionId, setActiveSessionId] = useState(null);
 
-    // ===== USER / AUTH =====
     const [userName, setUserName] = useState("");
     const [avatarKey, setAvatarKey] = useState(null);
     const [userAvatar, setUserAvatar] = useState(null);
-
     const [accessToken, setAccessToken] = useState(null);
     const [refreshToken, setRefreshToken] = useState(null);
 
-    // ===== GAME =====
     const [team, setTeam] = useState(null);
     const [driver, setDriver] = useState(null);
+    const [sim, setSim] = useState(defaultSim());
 
-    // Simulation “progress”
-    // (tu peux enrichir quand tu veux : calendar, standings, results, currentRace, etc.)
-    const [sim, setSim] = useState({
-        season: 2026,
-        currentRound: 0,
-        lastResults: null,
-        standings: null,
-    });
+    const clearRuntimeState = () => {
+        setUserName("");
+        setAvatarKey(null);
+        setUserAvatar(null);
+        setAccessToken(null);
+        setRefreshToken(null);
+        setTeam(null);
+        setDriver(null);
+        setSim(defaultSim());
+    };
 
-    // ===== LOAD =====
-    useEffect(() => {
-        const u = safeParse(localStorage.getItem(STORAGE_USER));
-        const g = safeParse(localStorage.getItem(STORAGE_GAME));
+    const loadSession = (sessionId = getActiveSessionId()) => {
+        setReady(false);
 
-        if (u) {
-            setUserName(u.userName || "");
-            setAvatarKey(u.avatarKey || null);
-            setUserAvatar(u.userAvatar || null);
-            setAccessToken(u.accessToken || null);
-            setRefreshToken(u.refreshToken || null);
+        if (sessionId && !getSessionProfiles().some((profile) => profile.id === sessionId)) {
+            sessionId = null;
         }
 
-        if (g) {
-            setTeam(g.team || null);
-            setDriver(g.driver || null);
-            setSim(
-                g.sim || {
-                    season: 2026,
-                    currentRound: 0,
-                    lastResults: null,
-                    standings: null,
-                }
-            );
+        if (!sessionId) {
+            setActiveSessionId(null);
+            clearRuntimeState();
+            setReady(true);
+            return;
         }
 
+        const u = safeParse(localStorage.getItem(getScopedStorageKey("user", sessionId))) || {};
+        const g = safeParse(localStorage.getItem(getScopedStorageKey("game", sessionId))) || {};
+        const nextAvatarKey = u.avatarKey || u.avatar_key || null;
+        const nextAvatarUrl = u.userAvatar || u.avatar_url || null;
+
+        setActiveSessionId(sessionId);
+        setUserName(u.userName || u.username || "");
+        setAvatarKey(nextAvatarKey);
+        setUserAvatar(nextAvatarUrl ? normalizeUrl(nextAvatarUrl) : avatarUrlFromKey(nextAvatarKey));
+        setAccessToken(u.accessToken || u.access || "local-token");
+        setRefreshToken(u.refreshToken || u.refresh || "local-refresh");
+        setTeam(g.team || null);
+        setDriver(g.driver || null);
+        setSim(g.sim || defaultSim());
+
+        touchSessionProfile(sessionId);
         setReady(true);
+    };
+
+    useEffect(() => {
+        loadSession();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // ===== SAVE =====
     useEffect(() => {
-        if (!ready) return;
+        if (!ready || !activeSessionId) return;
 
         localStorage.setItem(
-            STORAGE_USER,
+            getScopedStorageKey("user", activeSessionId),
             JSON.stringify({
                 userName,
                 avatarKey,
@@ -97,80 +118,86 @@ export function GameProvider({ children }) {
                 refreshToken,
             })
         );
-    }, [ready, userName, avatarKey, userAvatar, accessToken, refreshToken]);
+
+        updateActiveSessionMeta({ name: userName || "Manager", avatarKey: avatarKey || "verstappen" });
+    }, [ready, activeSessionId, userName, avatarKey, userAvatar, accessToken, refreshToken]);
 
     useEffect(() => {
-        if (!ready) return;
+        if (!ready || !activeSessionId) return;
 
         localStorage.setItem(
-            STORAGE_GAME,
+            getScopedStorageKey("game", activeSessionId),
             JSON.stringify({
                 team,
                 driver,
                 sim,
             })
         );
-    }, [ready, team, driver, sim]);
 
-    // ===== ACTIONS =====
+        touchSessionProfile(activeSessionId);
+    }, [ready, activeSessionId, team, driver, sim]);
 
-    // Appelé après login
-    // me peut contenir avatar_key/avatar_url
+    const activateSession = (sessionId) => {
+        activateSessionProfile(sessionId);
+        loadSession(sessionId);
+    };
+
+    const refreshSession = () => {
+        loadSession(activeSessionId || getActiveSessionId());
+    };
+
     const applyLogin = ({ tokens, me, fallbackUsername }) => {
-        const access = tokens?.access || null;
-        const refresh = tokens?.refresh || null;
+        const access = tokens?.access || "local-token";
+        const refresh = tokens?.refresh || "local-refresh";
+        const name = me?.username || fallbackUsername || userName || "Manager";
+        const aKey = me?.avatar_key || avatarKey || "verstappen";
+        const aUrl = me?.avatar_url || null;
 
         setAccessToken(access);
         setRefreshToken(refresh);
-
-        const name = me?.username || fallbackUsername || "";
         setUserName(name);
-
-        const aKey = me?.avatar_key || null;
-        const aUrl = me?.avatar_url || null;
 
         if (aUrl) {
             setUserAvatar(normalizeUrl(aUrl));
             setAvatarKey(aKey);
-        } else if (aKey) {
+        } else {
             setAvatarKey(aKey);
             setUserAvatar(avatarUrlFromKey(aKey));
         }
     };
 
     const applyAvatar = ({ avatar_key }) => {
-        setAvatarKey(avatar_key || null);
+        const nextKey = avatar_key || null;
+        setAvatarKey(nextKey);
+        setUserAvatar(nextKey ? avatarUrlFromKey(nextKey) : null);
+        updateActiveSessionMeta({ avatarKey: nextKey || "verstappen" });
     };
 
     const logout = () => {
-        setUserName("");
-        setAvatarKey(null);
-        setUserAvatar(null);
-        setAccessToken(null);
-        setRefreshToken(null);
-
-        setTeam(null);
-        setDriver(null);
-        setSim({ season: 2026, currentRound: 0, lastResults: null, standings: null });
-
-        localStorage.removeItem(STORAGE_USER);
-        localStorage.removeItem(STORAGE_GAME);
+        clearActiveSessionSelection();
+        setActiveSessionId(null);
+        clearRuntimeState();
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("refresh_token");
     };
 
-    const isAuthenticated = useMemo(() => !!accessToken, [accessToken]);
+    const isAuthenticated = useMemo(() => !!activeSessionId, [activeSessionId]);
 
     return (
         <GameContext.Provider
             value={{
                 ready,
+                activeSessionId,
+                activateSession,
+                refreshSession,
 
-                // User
                 userName,
                 setUserName,
                 avatarKey,
+                setAvatarKey,
                 userAvatar,
+                setUserAvatar,
 
-                // Auth
                 accessToken,
                 refreshToken,
                 setAccessToken,
@@ -180,7 +207,6 @@ export function GameProvider({ children }) {
                 applyAvatar,
                 logout,
 
-                // Game
                 team,
                 setTeam,
                 driver,
@@ -194,6 +220,7 @@ export function GameProvider({ children }) {
     );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useGame() {
     const ctx = useContext(GameContext);
     if (!ctx) throw new Error("useGame must be used inside GameProvider");

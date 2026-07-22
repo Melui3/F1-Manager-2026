@@ -1,13 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useGame } from "../context/GameContext";
 import { apiFetch } from "../services/api";
-import { COUNTRY_FLAG, TEAM_COLOR, PODIUM_STYLE } from "../data/labels";
+import { TEAM_COLOR, PODIUM_STYLE } from "../data/labels";
+import FlagBadge from "../components/ui/FlagBadge";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function flag(country) {
-    return COUNTRY_FLAG[country] ?? "🏁";
-}
 
 function teamDot(teamName) {
     const color = TEAM_COLOR[teamName]?.dot ?? "bg-f1-muted";
@@ -47,12 +44,12 @@ function DriverRow({ rank, driver, isPlayer }) {
                     ? "border-f1-red/40 bg-f1-red/5 font-semibold"
                     : podium
                         ? `${podium.ring} font-medium`
-                        : "border-f1-border bg-f1-dark/30",
+                        : "f1-soft-panel hover:border-f1-red/30",
             ].join(" ")}
         >
             <PodiumBadge rank={rank} />
 
-            <span className="text-base">{flag(driver.country)}</span>
+            <FlagBadge country={driver.country} compact />
 
             <div className="flex-1 min-w-0">
                 <div className={`font-semibold truncate ${isPlayer ? "text-f1-white" : podium ? podium.text : "text-f1-white"}`}>
@@ -88,7 +85,7 @@ function TeamRow({ rank, entry }) {
         <div
             className={[
                 "flex items-center gap-3 px-4 py-3 rounded-xl border text-sm transition-colors",
-                podium ? `${podium.ring} font-medium` : "border-f1-border bg-f1-dark/30",
+                podium ? `${podium.ring} font-medium` : "f1-soft-panel hover:border-f1-red/30",
             ].join(" ")}
         >
             <PodiumBadge rank={rank} />
@@ -163,6 +160,17 @@ export default function Standings() {
                 )}
             </div>
 
+            <div className="mb-5 rounded-2xl border border-f1-border bg-f1-surface p-4">
+                <div className="font-f1-display text-xs font-bold tracking-widest text-f1-red uppercase mb-2">
+                    A quoi sert cet ecran ?
+                </div>
+                <p className="text-sm text-f1-silver leading-relaxed">
+                    Les classements lisent la sauvegarde de la session active. Le WDC compare les pilotes,
+                    le WCC additionne les points des deux pilotes de chaque ecurie. Simule de nouvelles
+                    sessions dans le calendrier pour voir les positions evoluer.
+                </p>
+            </div>
+
             {/* Tabs WDC / WCC */}
             <div className="flex gap-1 mb-5 p-1 bg-f1-surface rounded-xl w-fit border border-f1-border">
                 {[
@@ -192,7 +200,7 @@ export default function Standings() {
             ) : error ? (
                 <div className="text-red-400 text-sm">{error}</div>
             ) : tab === "wdc" ? (
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-2 f1-stagger">
                     {wdcSorted.map((d, i) => {
                         const isPlayer =
                             playerDriver &&
@@ -209,7 +217,7 @@ export default function Standings() {
                     })}
                 </div>
             ) : (
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-2 f1-stagger">
                     {wccSorted.map((entry, i) => (
                         <TeamRow key={entry.team} rank={i + 1} entry={entry} />
                     ))}

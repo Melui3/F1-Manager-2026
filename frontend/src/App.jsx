@@ -1,7 +1,6 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 
 import LoginScreen    from "./pages/LoginScreen.jsx";
-import RegisterScreen from "./pages/RegisterScreen.jsx";
 import ChooseTeam     from "./pages/ChooseTeam.jsx";
 import ChooseDriver   from "./pages/ChooseDriver.jsx";
 import StartSeason    from "./pages/StartSeason.jsx";
@@ -13,14 +12,13 @@ import GameLayout   from "./components/GameLayout.jsx";
 import SetupLayout  from "./components/SetupLayout.jsx";
 import { useGame }  from "./context/GameContext";
 import { ToastProvider } from "./context/ToastContext.jsx";
-
-const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === "true";
+import { CLIENT_ONLY_MODE } from "./services/api.js";
 
 function DemoBanner() {
-    if (!DEMO_MODE) return null;
+    if (!CLIENT_ONLY_MODE) return null;
     return (
         <div className="w-full bg-f1-yellow/10 border-b border-f1-yellow/30 text-f1-yellow text-center text-xs font-semibold py-1.5 tracking-wide">
-            ⚡ Mode démo — aucun compte requis, données simulées côté client
+            Mode client-only - aucun serveur requis, sauvegarde locale dans le navigateur
         </div>
     );
 }
@@ -40,7 +38,7 @@ export default function App() {
             <Routes>
                 <Route path="/"         element={<HomeRedirect />} />
                 <Route path="/login"    element={<LoginScreen />} />
-                <Route path="/register" element={<RegisterScreen />} />
+                <Route path="/register" element={<Navigate to="/login" replace />} />
 
                 {/* Setup (Header via SetupLayout, pas de GameNav) */}
                 <Route path="/choose-team"   element={<SetupLayout><ChooseTeam /></SetupLayout>} />

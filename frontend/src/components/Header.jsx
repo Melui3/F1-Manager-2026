@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useGame } from "../context/GameContext";
 
@@ -11,8 +11,8 @@ export default function Header({ userName: userNameProp }) {
     const logoUrl = `${base}logo-f1m-2026.png`;
 
     const src = avatarKey ? `${base}avatars/${avatarKey}.jpg` : null;
-    const [ok, setOk] = useState(true);
-    useEffect(() => setOk(true), [avatarKey]);
+    const [failedSrc, setFailedSrc] = useState(null);
+    const showAvatar = src && failedSrc !== src;
 
     return (
         <header className="flex items-center justify-between px-5 py-3 bg-f1-dark border-b border-f1-border text-f1-white shadow-md">
@@ -31,12 +31,12 @@ export default function Header({ userName: userNameProp }) {
             >
                 <span className="text-sm font-semibold text-f1-white">{userName}</span>
 
-                {src && ok ? (
+                {showAvatar ? (
                     <img
                         src={src}
                         alt="Avatar"
                         className="h-8 w-8 rounded-full object-cover border-2 border-f1-border"
-                        onError={() => setOk(false)}
+                        onError={() => setFailedSrc(src)}
                     />
                 ) : (
                     <div className="h-8 w-8 rounded-full bg-f1-surface-2 border-2 border-f1-border flex items-center justify-center text-xs font-bold text-f1-silver">
