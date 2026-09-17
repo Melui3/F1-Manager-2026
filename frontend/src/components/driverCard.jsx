@@ -1,40 +1,18 @@
 import { useMemo, useState } from "react";
 import { getDriverExtra } from "../data/driverExtra";
 import FlagBadge from "./ui/FlagBadge";
+import { getTeamLivery } from "../data/teamLiveries";
+import { driverPortrait } from "../data/visualAssets";
 
 function cx(...arr) {
     return arr.filter(Boolean).join(" ");
 }
 
-const TEAM_ACCENT = {
-    "Oracle Red Bull Racing": "#3671c6",
-    "Scuderia Ferrari HP": "#e10600",
-    "Mercedes-AMG Petronas Formula One Team": "#00d2be",
-    "McLaren Mastercard Formula 1 Team": "#ff8000",
-    "Aston Martin Aramco Formula One Team": "#229971",
-    "BWT Alpine F1 Team": "#0090ff",
-    "Audi F1 Team (Revolut)": "#d7d7d7",
-    "Cadillac Formula One Team": "#d6b45f",
-    "TGR Hass F1 Team": "#b6babd",
-    "Atlassian Williams Racing": "#64c4ff",
-    "Visa Cash App Racing Bulls F1 Team": "#6692ff",
-    "Red Bull": "#3671c6",
-    Mercedes: "#00d2be",
-    Ferrari: "#e80020",
-    McLaren: "#ff8000",
-    "Aston Martin": "#229971",
-    Alpine: "#0090ff",
-    Williams: "#64c4ff",
-    "Racing Bulls": "#6692ff",
-    "Kick Sauber": "#52e252",
-    Haas: "#b6babd",
-};
-
 function Chip({ children, className = "", style }) {
     return (
         <span
             className={cx(
-                "text-[11px] px-2 py-0.5 rounded-full border border-f1-border bg-f1-dark/60 text-f1-silver",
+                "inline-flex shrink-0 whitespace-nowrap text-[11px] px-2 py-0.5 rounded-full border border-f1-border bg-f1-dark/60 text-f1-silver",
                 className
             )}
             style={style}
@@ -76,10 +54,8 @@ function listToChips(arr) {
     return Array.isArray(arr) ? arr.filter(Boolean) : [];
 }
 
-export default function DriverCard({ driver, isSelected, onSelect, badge = null }) {
+export default function DriverCard({ driver, isSelected, onSelect, onPreview, badge = null }) {
     const [showDetails, setShowDetails] = useState(false);
-
-    const base = import.meta.env.BASE_URL;
 
     const surname = driver?.surname ?? "";
     const name = driver?.name ?? "";
@@ -90,11 +66,11 @@ export default function DriverCard({ driver, isSelected, onSelect, badge = null 
     const teamLabel = typeof team === "object" && team !== null ? team.name ?? "Ecurie" : team;
     const fullName = `${name} ${surname}`.trim() || "Pilote";
     const extra = useMemo(() => getDriverExtra(driver), [driver]);
-    const accent = TEAM_ACCENT[teamLabel] ?? "#e10600";
+    const accent = getTeamLivery(teamLabel).color;
 
     const photoSrc =
         surname && number !== ""
-            ? `${base}drivers/${String(surname).toLowerCase()}_${number}.avif`
+            ? driverPortrait(driver)
             : null;
 
     const age2026 = useMemo(() => {
@@ -129,7 +105,9 @@ export default function DriverCard({ driver, isSelected, onSelect, badge = null 
         (traits.length || strengths.length || weaknesses.length || notes.length || funFacts.length || extra.style);
 
     const handleSelect = () => {
+        if (isSelected && showDetails) return;
         if (typeof onSelect === "function") onSelect(driver);
+        setShowDetails(true);
     };
 
     const handleKeyDown = (event) => {
@@ -148,6 +126,10 @@ export default function DriverCard({ driver, isSelected, onSelect, badge = null 
             aria-label={`Choisir ${fullName}, pilote ${teamLabel}`}
             onClick={handleSelect}
             onKeyDown={handleKeyDown}
+            onPointerEnter={() => onPreview?.(driver)}
+            onPointerLeave={() => onPreview?.(null)}
+            onFocus={() => onPreview?.(driver)}
+            onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) onPreview?.(null); }}
             style={{
                 "--driver-accent": accent,
                 "--driver-glow": `${accent}52`,
@@ -176,7 +158,7 @@ export default function DriverCard({ driver, isSelected, onSelect, badge = null 
                             <div className="font-f1-display text-3xl font-black leading-none" style={{ color: accent }}>
                                 #{number}
                             </div>
-                            <div className="flex flex-wrap justify-end gap-1.5">
+                            <div className="driver-card-badges flex min-w-0 flex-wrap justify-end gap-1.5">
                                 <FlagBadge country={country} compact className="bg-f1-dark/60" />
                                 {isSelected && (
                                     <Chip
@@ -217,19 +199,21 @@ export default function DriverCard({ driver, isSelected, onSelect, badge = null 
             {/* Toggle détails */}
             <button
                 type="button"
+                aria-expanded={showDetails}
                 className="relative z-10 w-full bg-f1-surface py-2.5 text-sm hover:bg-f1-surface-2 border-t border-f1-border font-semibold transition-colors"
                 style={{ color: accent }}
                 onClick={(e) => {
                     e.stopPropagation();
-                    setShowDetails((v) => !v);
+                    if (showDetails) setShowDetails(false);
+                    else handleSelect();
                 }}
             >
-                {showDetails ? "Masquer détails" : "Voir détails"}
+                {showDetails ? "Masquer détails" : "Découvrir ce pilote"}
             </button>
 
             {/* Détails */}
             {showDetails && (
-                <div className="relative z-10 p-4 bg-f1-dark border-t border-f1-border space-y-3 f1-fade-in">
+                <div className="relative z-10 p-4 bg-f1-dark border-t border-f1-border space-y-3 f1-fade-in" onClick={(event) => event.stopPropagation()}>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <Section title="Infos">
                             <div className="space-y-1.5 text-sm">

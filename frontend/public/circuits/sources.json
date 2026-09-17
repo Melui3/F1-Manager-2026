@@ -1,0 +1,122 @@
+[
+  {
+    "slug": "australia",
+    "page": "https://www.formula1.com/en/latest/article/circuit-guide-2026-australian-grand-prix-albert-park.19zPlhKhMbTaVNFIPKAAMa.19zPlhKhMbTaVNFIPKAAMa",
+    "image": "https://media.formula1.com/image/upload/c_lfill,w_1440/q_auto/v1740000001/content/dam/fom-website/manual/Melbourne%20track.webp"
+  },
+  {
+    "slug": "china",
+    "page": "https://www.formula1.com/en/racing/2026/china/circuit",
+    "image": "https://media.formula1.com/image/upload/c_lfill,w_1440/q_auto/v1740000001/content/dam/fom-website/2018-redesign-assets/Racehub%20header%20images%2016x9/China.webp"
+  },
+  {
+    "slug": "japan",
+    "page": "https://www.formula1.com/en/racing/2026/japan/circuit",
+    "image": "https://media.formula1.com/image/upload/c_lfill,w_1440/q_auto/v1740000001/content/dam/fom-website/2018-redesign-assets/Racehub%20header%20images%2016x9/Japan.webp"
+  },
+  {
+    "slug": "bahrain",
+    "page": "https://www.formula1.com/en/racing/2025/bahrain/circuit",
+    "image": "https://media.formula1.com/image/upload/c_lfill,w_1440/q_auto/v1740000001/content/dam/fom-website/2018-redesign-assets/Racehub%20header%20images%2016x9/Bahrain.webp"
+  },
+  {
+    "slug": "miami",
+    "page": "https://www.formula1.com/en/racing/2026/miami/circuit",
+    "image": "https://media.formula1.com/image/upload/c_lfill,w_1440/q_auto/v1740000001/content/dam/fom-website/2018-redesign-assets/Racehub%20header%20images%2016x9/Miami.webp"
+  },
+  {
+    "slug": "canada",
+    "page": "https://www.formula1.com/en/racing/2026/canada/circuit",
+    "image": "https://media.formula1.com/image/upload/c_lfill,w_1440/q_auto/v1740000001/content/dam/fom-website/2018-redesign-assets/Racehub%20header%20images%2016x9/Canada.webp"
+  },
+  {
+    "slug": "monaco",
+    "page": "https://www.formula1.com/en/racing/2026/monaco/circuit",
+    "image": "https://media.formula1.com/image/upload/c_lfill,w_1440/q_auto/v1740000001/content/dam/fom-website/2018-redesign-assets/Racehub%20header%20images%2016x9/Monaco.webp"
+  },
+  {
+    "slug": "barcelona-catalunya",
+    "page": "https://www.formula1.com/en/racing/2026/barcelona-catalunya/circuit",
+    "image": "https://media.formula1.com/image/upload/c_lfill,w_1440/q_auto/v1740000001/content/dam/fom-website/2018-redesign-assets/Racehub%20header%20images%2016x9/Spain.webp"
+  },
+  {
+    "slug": "austria",
+    "page": "https://www.formula1.com/en/racing/2026/austria/circuit",
+    "image": "https://media.formula1.com/image/upload/c_lfill,w_1440/q_auto/v1740000001/content/dam/fom-website/2018-redesign-assets/Racehub%20header%20images%2016x9/Austria.webp"
+  },
+  {
+    "slug": "great-britain",
+    "page": "https://www.formula1.com/en/racing/2026/great-britain/circuit",
+    "image": "https://media.formula1.com/image/upload/c_lfill,w_1440/q_auto/v1740000001/content/dam/fom-website/2018-redesign-assets/Racehub%20header%20images%2016x9/Great%20Britain.webp"
+  },
+  {
+    "slug": "belgium",
+    "page": "https://www.formula1.com/en/racing/2026/belgium/circuit",
+    "image": "https://media.formula1.com/image/upload/c_lfill,w_1440/q_auto/v1740000001/content/dam/fom-website/2018-redesign-assets/Racehub%20header%20images%2016x9/Belgium.webp"
+  },
+  {
+    "slug": "hungary",
+    "page": "https://www.formula1.com/en/racing/2026/hungary/circuit",
+    "image": "https://media.formula1.com/image/upload/c_lfill,w_1440/q_auto/v1740000001/content/dam/fom-website/2018-redesign-assets/Racehub%20header%20images%2016x9/Hungary.webp"
+  },
+  {
+    "slug": "netherlands",
+    "page": "https://www.formula1.com/en/racing/2026/netherlands/circuit",
+    "image": "https://media.formula1.com/image/upload/c_lfill,w_1440/q_auto/v1740000001/content/dam/fom-website/2018-redesign-assets/Racehub%20header%20images%2016x9/Netherlands.webp"
+  },
+  {
+    "slug": "italy",
+    "page": "https://www.formula1.com/en/racing/2026/italy/circuit",
+    "image": "https://media.formula1.com/image/upload/c_lfill,w_1440/q_auto/v1740000001/content/dam/fom-website/2018-redesign-assets/Racehub%20header%20images%2016x9/Italy.webp"
+  },
+  {
+    "slug": "azerbaijan",
+    "page": "https://www.formula1.com/en/racing/2026/azerbaijan/circuit",
+    "image": "https://media.formula1.com/image/upload/c_lfill,w_1440/q_auto/v1740000001/content/dam/fom-website/2018-redesign-assets/Racehub%20header%20images%2016x9/Azerbaijan.webp"
+  },
+  {
+    "slug": "singapore",
+    "page": "https://www.formula1.com/en/racing/2026/singapore/circuit",
+    "image": "https://media.formula1.com/image/upload/c_lfill,w_1440/q_auto/v1740000001/content/dam/fom-website/2018-redesign-assets/Racehub%20header%20images%2016x9/Singapore.webp"
+  },
+  {
+    "slug": "united-states",
+    "page": "https://www.formula1.com/en/racing/2026/united-states/circuit",
+    "image": "https://media.formula1.com/image/upload/c_lfill,w_1440/q_auto/v1740000001/content/dam/fom-website/2018-redesign-assets/Racehub%20header%20images%2016x9/USA.webp"
+  },
+  {
+    "slug": "mexico",
+    "page": "https://www.formula1.com/en/racing/2026/mexico/circuit",
+    "image": "https://media.formula1.com/image/upload/c_lfill,w_1440/q_auto/v1740000001/content/dam/fom-website/2018-redesign-assets/Racehub%20header%20images%2016x9/Mexico.webp"
+  },
+  {
+    "slug": "brazil",
+    "page": "https://www.formula1.com/en/racing/2026/brazil/circuit",
+    "image": "https://media.formula1.com/image/upload/c_lfill,w_1440/q_auto/v1740000001/content/dam/fom-website/2018-redesign-assets/Racehub%20header%20images%2016x9/Brazil.webp"
+  },
+  {
+    "slug": "las-vegas",
+    "page": "https://www.formula1.com/en/racing/2026/las-vegas/circuit",
+    "image": "https://media.formula1.com/image/upload/c_lfill,w_1440/q_auto/v1740000001/content/dam/fom-website/2018-redesign-assets/Racehub%20header%20images%2016x9/Las%20Vegas.webp"
+  },
+  {
+    "slug": "qatar",
+    "page": "https://www.formula1.com/en/racing/2026/qatar/circuit",
+    "image": "https://media.formula1.com/image/upload/c_lfill,w_1440/q_auto/v1740000001/content/dam/fom-website/2018-redesign-assets/Racehub%20header%20images%2016x9/Qatar.webp"
+  },
+  {
+    "slug": "united-arab-emirates",
+    "page": "https://www.formula1.com/en/racing/2026/united-arab-emirates/circuit",
+    "image": "https://media.formula1.com/image/upload/c_lfill,w_1440/q_auto/v1740000001/content/dam/fom-website/2018-redesign-assets/Racehub%20header%20images%2016x9/Abu%20Dhabi.webp"
+  },
+  {
+    "page": "https://www.formula1.com/en/racing/2026/spain",
+    "slug": "spain",
+    "image": "https://media.formula1.com/image/upload/t_16by9Centre/c_lfill,w_1440/q_auto/v1740000001/fom-website/2023/Spain/IFEMA_MADRID_PRENSA_005.webp"
+  },
+  {
+    "page": "https://www.formula1.com/en/racing/2025/saudi-arabia/circuit",
+    "slug": "saudi-arabia",
+    "image": "https://media.formula1.com/image/upload/c_lfill,w_1440/q_auto/v1740000001/content/dam/fom-website/2018-redesign-assets/Racehub%20header%20images%2016x9/Saudi_Arabia.webp"
+  }
+]

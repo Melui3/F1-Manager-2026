@@ -1,4 +1,6 @@
 import { getScopedStorageKey, touchSessionProfile, updateActiveSessionMeta } from "./sessionStore.js";
+import { advanceLiveRace, createLiveRace, setRaceCommand, ALLOWED_LAPS, TYRES } from "./liveRaceEngine.js";
+import { earnedBudget } from "./raceEconomy.js";
 
 // ============================================================================
 // F1 Manager 2026 — Mock API  (demo mode, aucun backend requis)
@@ -114,11 +116,13 @@ function initState() {
         economyVersion: ECONOMY_VERSION,
         teamUpgrades: blankTeamUpgrades(),
         history: [],
+        liveRace: null,
     };
 }
 
 let _state = null;
 let _stateKey = null;
+let _stateRaw = null;
 
 function ensureStateShape(s) {
     if (!s || typeof s !== "object") return initState();
@@ -142,22 +146,29 @@ function ensureStateShape(s) {
 
 function getState() {
     const key = currentStateKey();
-    if (_state && _stateKey === key) return _state;
+    let raw = null;
+    try { raw = localStorage.getItem(key); } catch { /* Storage may be disabled. */ }
+    if (_state && _stateKey === key && raw === _stateRaw) return _state;
     _state = null;
     try {
-        const raw = localStorage.getItem(key);
         if (raw) _state = ensureStateShape(JSON.parse(raw));
     } catch { /* ignore */ }
     if (!_state) _state = initState();
     _stateKey = key;
+    _stateRaw = raw;
     return _state;
 }
 
-function saveState(s) {
+function saveState(s, strict = false) {
     const key = currentStateKey();
+    const raw = JSON.stringify(s);
+    try { localStorage.setItem(key, raw); }
+    catch {
+        if (strict) throw new Error("Sauvegarde impossible. Libère de l'espace dans ce navigateur puis réessaie.");
+    }
     _state = s;
     _stateKey = key;
-    try { localStorage.setItem(key, JSON.stringify(s)); } catch { /* ignore */ }
+    _stateRaw = raw;
     touchSessionProfile();
 }
 
@@ -307,11 +318,19 @@ export function mockCalendar() {
 
 export function mockSimulate(index, force = false) {
     const s = getState();
+    assertNoLiveRace(s);
     const session = s.sessions.find((sess) => sess.index === index);
     if (!session) throw Object.assign(new Error(`Session ${index} introuvable`), { status: 404 });
     if (session.is_simulated && !force) throw Object.assign(new Error(`Session ${index} déjà simulée`), { status: 400 });
+    if (session.live_race_id) throw new Error("Ce résultat en direct est définitif. Réinitialise la saison pour rejouer cette course.");
 
     const results = simulateSession(session, s.drivers, s.teamUpgrades);
+    recordSession(s, session, results);
+    saveState(s);
+    return { results };
+}
+
+function recordSession(s, session, results) {
     session.is_simulated = true;
     session.results = results.map((r) => ({
         id: r.id,
@@ -324,6 +343,7 @@ export function mockSimulate(index, force = false) {
         points_gained: r.points_gained ?? 0,
         stats_gained: r.stats_gained ?? 0,
         session_score: r.session_score ?? null,
+        ...(r.total_time !== undefined ? { total_time: r.total_time, pit_stops: r.pit_stops, best_lap: r.best_lap } : {}),
     }));
     s.history = [
         {
@@ -333,11 +353,93 @@ export function mockSimulate(index, force = false) {
             session_type: session.session_type,
             date: session.date,
             results: session.results,
+            ...(session.live_race_id ? { mode: "live", race_summary: session.race_summary } : {}),
         },
         ...(s.history || []).filter((h) => h.index !== session.index),
     ].slice(0, 20);
-    saveState(s);
-    return { results };
+}
+
+function assertNoLiveRace(s) {
+    if (s.liveRace?.status === "racing") throw Object.assign(new Error("Un GP est en cours. Reprends-le depuis le calendrier avant de continuer."), { status: 409 });
+}
+
+function liveResponse(s) {
+    return structuredClone({ race: s.liveRace ?? null, budget: s.budget });
+}
+
+export function mockLiveRace() { return liveResponse(getState()); }
+
+export function mockStartLiveRace({ session_index, player_id, total_laps = 10, tyre = "medium" }) {
+    const s = structuredClone(getState());
+    if (s.liveRace?.status === "racing") return liveResponse(s);
+    if (!ALLOWED_LAPS.includes(total_laps) || !TYRES[tyre]) throw new Error("Configuration de course invalide.");
+    const session = s.sessions.find((item) => !item.is_simulated && ["GP", "S"].includes(item.session_type));
+    if (!session || session.index !== Number(session_index)) throw new Error("Cette course n'est plus la prochaine du calendrier.");
+    const player = s.drivers.find((driver) => driver.id === Number(player_id));
+    if (!player) throw new Error("Sélectionne ton pilote avant de prendre le départ.");
+
+    // Prepare only the remaining practice/qualifying sessions before this race.
+    for (const preceding of s.sessions.filter((item) => item.index < session.index && !item.is_simulated)) {
+        recordSession(s, preceding, simulateSession(preceding, s.drivers, s.teamUpgrades));
+    }
+    const qualifying = s.sessions.find((item) => item.gp_name === session.gp_name && item.session_type === (session.session_type === "S" ? "QS" : "QC"));
+    const ranked = rankedResults(session, s.drivers, s.teamUpgrades);
+    const grid = qualifying?.results?.length ? [...qualifying.results].sort((a, b) => a.position - b.position).map((item) => item.id) : ranked.map((item) => item.driver.id);
+    s.liveRace = createLiveRace({
+        session, season: s.season, drivers: s.drivers, playerId: player.id, grid,
+        ratings: Object.fromEntries(ranked.map(({ driver, score }) => [driver.id, score])),
+        upgrades: s.teamUpgrades, totalLaps: total_laps, tyre, seed: Math.floor(Math.random() * 1_000_000_000),
+    });
+    saveState(s, true);
+    return liveResponse(s);
+}
+
+export function mockCommandLiveRace({ race_id, command }) {
+    const s = structuredClone(getState());
+    if (!s.liveRace || s.liveRace.id !== race_id) throw new Error("Cette course n'est plus active.");
+    s.liveRace = setRaceCommand(s.liveRace, command ?? {}, s.budget);
+    saveState(s, true);
+    return liveResponse(s);
+}
+
+export function mockAdvanceLiveRace({ race_id, expected_lap }) {
+    const s = structuredClone(getState());
+    const previous = s.liveRace;
+    if (!previous || previous.id !== race_id) throw new Error("Cette course n'est plus active.");
+    if (previous.status === "finished") return liveResponse(s);
+    if (!Number.isInteger(expected_lap) || expected_lap > previous.lap) throw new Error("Tour invalide. Recharge la course pour reprendre.");
+    // Retried requests and a second tab cannot advance or pay out the same lap twice.
+    if (expected_lap < previous.lap) return liveResponse(s);
+    s.liveRace = advanceLiveRace(previous, s.budget);
+    s.budget -= s.liveRace.spent - previous.spent;
+    if (s.liveRace.status === "finished") {
+        const race = s.liveRace;
+        const session = s.sessions.find((item) => item.index === race.session.index);
+        if (!session || session.is_simulated) throw new Error("Cette course a déjà été comptabilisée.");
+        const pointsTable = session.session_type === "S" ? [10, 9, 8, 7, 6, 5, 4, 3, 2, 1] : [25, 18, 15, 12, 10, 8, 6, 4, 2, 1];
+        const results = race.cars.map((car, index) => {
+            const driver = s.drivers.find((item) => item.id === car.id);
+            const points = pointsTable[index] ?? 0;
+            driver.points = (driver.points || 0) + points;
+            driver.wins = (driver.wins || 0) + (index === 0 ? 1 : 0);
+            driver.podiums = (driver.podiums || 0) + (index < 3 ? 1 : 0);
+            driver.racing = clamp(driver.racing + 3);
+            driver.speed = clamp(driver.speed + 2);
+            driver.reaction = clamp(driver.reaction + 1);
+            return { ...driver, position: index + 1, points_gained: points, stats_gained: 3, total_time: car.totalTime, pit_stops: car.pitStops, best_lap: car.bestLap };
+        });
+        const player = race.cars.find((car) => car.id === race.playerId);
+        const reward = earnedBudget(player.position, session.session_type);
+        const repairs = Math.min(s.budget + reward, Math.round(player.damage * 6500));
+        s.budget += reward - repairs;
+        race.settlement = { reward, repairs, pitCosts: race.spent, net: reward - repairs - race.spent, budget: s.budget, points: results.find((driver) => driver.id === race.playerId).points_gained };
+        race.results = results;
+        session.live_race_id = race.id;
+        session.race_summary = { totalLaps: race.totalLaps, ...race.settlement };
+        recordSession(s, session, results);
+    }
+    saveState(s, true);
+    return liveResponse(s);
 }
 
 export function mockResetSeason(options = {}) {
@@ -351,6 +453,7 @@ export function mockResetSeason(options = {}) {
     s.economyVersion = ECONOMY_VERSION;
     s.teamUpgrades = blankTeamUpgrades();
     s.history  = [];
+    s.liveRace = null;
     saveState(s);
     return { season: s.season, budget: s.budget, teamUpgrades: s.teamUpgrades };
 }
@@ -404,6 +507,7 @@ export function mockUpgradeTeam(teamName, upgrade) {
     if (!UPGRADE_BASE_COST[upgrade]) throw Object.assign(new Error("Upgrade invalide"), { status: 400 });
 
     const s = getState();
+    assertNoLiveRace(s);
     s.teamUpgrades = s.teamUpgrades || blankTeamUpgrades();
     s.teamUpgrades[teamName] = { ...DEFAULT_UPGRADES, ...(s.teamUpgrades[teamName] || {}) };
 
@@ -434,6 +538,7 @@ export function mockTrain(driverId, stat) {
     if (!cost) throw Object.assign(new Error("Stat invalide"), { status: 400 });
 
     const s = getState();
+    assertNoLiveRace(s);
     if ((s.budget || 0) < cost) throw Object.assign(new Error("Budget insuffisant"), { status: 400 });
 
     const driver = s.drivers.find((d) => d.id === driverId);
@@ -449,6 +554,7 @@ export function mockSignDriver(driverId, teamName, replacedDriverId = null) {
     if (!driverId || !teamName) throw Object.assign(new Error("Signature pilote invalide"), { status: 400 });
 
     const s = getState();
+    assertNoLiveRace(s);
     const driver = s.drivers.find((d) => Number(d.id) === Number(driverId));
     if (!driver) throw Object.assign(new Error("Pilote introuvable"), { status: 404 });
 
@@ -489,6 +595,14 @@ export function mockDispatch(path, options = {}) {
     if (method === "GET" && path === "/api/season/calendar/") return Promise.resolve(mockCalendar());
 
     // Saison
+    if (path.startsWith("/api/live-race/")) {
+        try {
+            if (method === "GET" && path === "/api/live-race/") return Promise.resolve(mockLiveRace());
+            if (method === "POST" && path === "/api/live-race/start/") return Promise.resolve(mockStartLiveRace(body));
+            if (method === "POST" && path === "/api/live-race/command/") return Promise.resolve(mockCommandLiveRace(body));
+            if (method === "POST" && path === "/api/live-race/advance/") return Promise.resolve(mockAdvanceLiveRace(body));
+        } catch (error) { return Promise.reject(error); }
+    }
     if (method === "POST" && path === "/api/season/reset/") return Promise.resolve(mockResetSeason(body));
     if (method === "GET"  && path === "/api/season/budget/")        return Promise.resolve(mockGetBudget());
     if (method === "POST" && path === "/api/season/budget/award/")  return Promise.resolve(mockAwardBudget(body.amount));

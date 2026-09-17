@@ -1,20 +1,9 @@
 import { useState } from "react";
 import FlagBadge from "./ui/FlagBadge";
 import Button from "./ui/Button";
-
-const TEAM_KEY_MAP = {
-    "Oracle Red Bull Racing": "redbull",
-    "Scuderia Ferrari HP": "ferrari",
-    "Mercedes-AMG Petronas Formula One Team": "mercedes",
-    "McLaren Mastercard Formula 1 Team": "mclaren",
-    "Aston Martin Aramco Formula One Team": "astonmartin",
-    "BWT Alpine F1 Team": "alpine",
-    "Audi F1 Team (Revolut)": "audi",
-    "Cadillac Formula One Team": "cadillac",
-    "TGR Hass F1 Team": "haas",
-    "Atlassian Williams Racing": "williams",
-    "Visa Cash App Racing Bulls F1 Team": "racingbulls",
-};
+import { getTeamLivery } from "../data/teamLiveries";
+import { useRacePresentation } from "./presentation/RacePresentation";
+import TeamLogo from "./ui/TeamLogo";
 
 const TEAM_STYLE = {
     "Oracle Red Bull Racing": "border-blue-500/60 shadow-blue-500/20",
@@ -28,34 +17,6 @@ const TEAM_STYLE = {
     "TGR Hass F1 Team": "border-gray-200/40 shadow-gray-200/10",
     "Atlassian Williams Racing": "border-sky-500/60 shadow-sky-500/20",
     "Visa Cash App Racing Bulls F1 Team": "border-indigo-400/60 shadow-indigo-400/20",
-};
-
-const TEAM_LOGO_BG = {
-    "Oracle Red Bull Racing": "from-blue-950/70 via-f1-dark to-yellow-950/30",
-    "Scuderia Ferrari HP": "from-red-950/70 via-f1-dark to-yellow-950/20",
-    "Mercedes-AMG Petronas Formula One Team": "from-emerald-950/60 via-f1-dark to-slate-900",
-    "McLaren Mastercard Formula 1 Team": "from-orange-950/70 via-f1-dark to-slate-900",
-    "Aston Martin Aramco Formula One Team": "from-emerald-950/70 via-f1-dark to-lime-950/20",
-    "BWT Alpine F1 Team": "from-sky-950/70 via-f1-dark to-pink-950/20",
-    "Audi F1 Team (Revolut)": "from-zinc-700/40 via-f1-dark to-red-950/20",
-    "Cadillac Formula One Team": "from-yellow-950/50 via-f1-dark to-blue-950/30",
-    "TGR Hass F1 Team": "from-zinc-800/60 via-f1-dark to-red-950/20",
-    "Atlassian Williams Racing": "from-sky-950/70 via-f1-dark to-blue-950/40",
-    "Visa Cash App Racing Bulls F1 Team": "from-indigo-950/70 via-f1-dark to-sky-950/30",
-};
-
-const TEAM_ACCENT = {
-    "Oracle Red Bull Racing": "#3671ff",
-    "Scuderia Ferrari HP": "#e10600",
-    "Mercedes-AMG Petronas Formula One Team": "#00d2be",
-    "McLaren Mastercard Formula 1 Team": "#ff8700",
-    "Aston Martin Aramco Formula One Team": "#006f62",
-    "BWT Alpine F1 Team": "#2293d1",
-    "Audi F1 Team (Revolut)": "#d7d7d7",
-    "Cadillac Formula One Team": "#d6b45f",
-    "TGR Hass F1 Team": "#b6babd",
-    "Atlassian Williams Racing": "#37bedd",
-    "Visa Cash App Racing Bulls F1 Team": "#5e8cff",
 };
 
 function Badge({ children }) {
@@ -75,15 +36,13 @@ function Row({ label, value }) {
     );
 }
 
-export default function TeamCard({ team, isSelected, onSelect, drivers = [], extra = null }) {
+export default function TeamCard({ team, isSelected, onSelect, onPreview, drivers = [], extra = null }) {
     const [open, setOpen] = useState(false);
-    const base = import.meta.env.BASE_URL;
+    const present = useRacePresentation();
 
     const teamName = team?.name ?? "Team";
-    const teamKey = TEAM_KEY_MAP[teamName] || team?.team_key || null;
     const style = TEAM_STYLE[teamName] || "border-f1-border shadow-black/0";
-    const accent = TEAM_ACCENT[teamName] || "#e10600";
-    const logoSrc = teamKey ? `${base}teams/${teamKey}.avif` : null;
+    const accent = getTeamLivery(teamName).color;
 
     const shortName = extra?.shortName ?? teamName;
     const debut = extra?.debutF1 ?? "—";
@@ -106,6 +65,10 @@ export default function TeamCard({ team, isSelected, onSelect, drivers = [], ext
             aria-label={`${selectedLabel} ${shortName}`}
             onClick={onSelect}
             onKeyDown={handleKeyDown}
+            onPointerEnter={() => onPreview?.(team)}
+            onPointerLeave={() => onPreview?.(null)}
+            onFocus={() => onPreview?.(team)}
+            onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) onPreview?.(null); }}
             style={{
                 "--team-accent": accent,
                 "--team-glow": `${accent}40`,
@@ -120,17 +83,8 @@ export default function TeamCard({ team, isSelected, onSelect, drivers = [], ext
             ].join(" ")}
         >
             {/* Logo header */}
-            <div className={`relative z-10 w-full h-36 bg-gradient-to-br ${TEAM_LOGO_BG[teamName] || "from-f1-surface via-f1-dark to-f1-dark"} flex items-center justify-center`}>
-                {logoSrc ? (
-                    <img
-                        src={logoSrc}
-                        alt={teamName}
-                        className="h-24 w-24 object-contain drop-shadow-xl"
-                        onError={(e) => e.currentTarget.remove()}
-                    />
-                ) : (
-                    <div className="text-xs text-f1-muted">Logo non disponible</div>
-                )}
+            <div className="team-logo-panel relative z-10 w-full h-36 flex items-center justify-center" style={{ background: `color-mix(in srgb, ${accent} 7%, #f5f6f8)`, borderBottom: `4px solid ${accent}` }}>
+                <TeamLogo team={team} className="h-28 w-40 object-contain" />
             </div>
 
             <div className="relative z-10 p-4">
@@ -165,7 +119,8 @@ export default function TeamCard({ team, isSelected, onSelect, drivers = [], ext
                     className="mt-4"
                     onClick={(e) => {
                         e.stopPropagation();
-                        setOpen((v) => !v);
+                        if (open) setOpen(false);
+                        else present({ team }, () => setOpen(true));
                     }}
                 >
                     {open ? "Masquer détails" : "Afficher détails"}

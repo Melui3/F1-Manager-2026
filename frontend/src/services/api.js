@@ -132,7 +132,16 @@ async function refreshAccessToken() {
  * options.authToken : si tu veux forcer un token spécifique (optionnel)
  */
 export async function apiFetch(path, options = {}) {
-    if (CLIENT_ONLY_MODE) return mockDispatch(path, options);
+    if (CLIENT_ONLY_MODE) {
+        if (path.startsWith("/api/live-race/") && options.method === "POST" && globalThis.navigator?.locks) {
+            const sessionKey = getScopedStorageKey("mock");
+            return navigator.locks.request(`live-race:${sessionKey}`, () => {
+                if (getScopedStorageKey("mock") !== sessionKey) throw new Error("La session active a changé.");
+                return mockDispatch(path, options);
+            });
+        }
+        return mockDispatch(path, options);
+    }
 
     const url = joinUrl(API_BASE, path);
 

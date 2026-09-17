@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Filter, Gauge, ShieldCheck, Sparkles, Trophy, Users, Wrench } from "lucide-react";
+import { Filter, Gauge, ShieldCheck, Trophy, Users, Wrench } from "lucide-react";
 import { useGame } from "../context/GameContext";
 import TeamCard from "../components/TeamCard.jsx";
 import { apiFetch } from "../services/api.js";
 import { TEAM_EXTRA } from "../data/teamExtra.js";
 import Button from "../components/ui/Button";
 import Card from "../components/ui/Card";
+import CarShowcase from "../components/presentation/CarShowcase";
+import { useRacePresentation } from "../components/presentation/RacePresentation";
 
 const norm = (s) => String(s ?? "").trim().toLowerCase();
 
@@ -92,10 +94,13 @@ export default function ChooseTeam() {
     const [drivers, setDrivers] = useState([]);
     const [activeFilter, setActiveFilter] = useState("all");
     const [loading, setLoading] = useState(true);
+    const [previewTeam, setPreviewTeam] = useState(null);
+    const present = useRacePresentation();
 
     const navigate = useNavigate();
 
     useEffect(() => {
+        window.scrollTo({ top: 0, behavior: "instant" });
         async function load() {
             try {
                 setLoading(true);
@@ -142,8 +147,11 @@ export default function ChooseTeam() {
     }, [activeFilter, teamsUI]);
 
     const handleSelect = (team) => {
-        setSelectedTeamLocal(team);
-        setTeam(team);
+        present({ team }, () => {
+            setSelectedTeamLocal(team);
+            setPreviewTeam(null);
+            setTeam(team);
+        });
     };
 
     const handleRandom = () => {
@@ -166,24 +174,15 @@ export default function ChooseTeam() {
     const profile = selectedTeam?._profile || null;
 
     return (
-        <div className="flex-1 p-5 md:p-6 lg:p-8 flex flex-col lg:flex-row gap-6 f1-fade-in">
+        <div className="flex-1 p-4 sm:p-6 f1-fade-in">
+            <div className="mx-auto max-w-7xl space-y-6">
+                <CarShowcase team={previewTeam ?? selectedTeam ?? teamsUI[0]} title="Choisis ton écurie" eyebrow="DÉBUT DE CARRIÈRE / PRENDS LE VOLANT" />
+                <div className="race-selection-layout flex flex-col lg:flex-row gap-6">
                 {/* GAUCHE */}
                 <div className="flex-1">
-                    <div className="mb-6 rounded-2xl border border-f1-border bg-f1-surface/75 p-5 md:p-6 overflow-hidden relative">
-                        <div className="absolute inset-y-0 right-0 w-1/3 bg-gradient-to-l from-f1-red/10 to-transparent pointer-events-none" />
-                        <div className="relative">
-                            <div className="inline-flex items-center gap-2 rounded-full border border-f1-red/30 bg-f1-red/10 px-3 py-1 text-xs font-bold text-f1-red">
-                                <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-                                Début de carrière
-                            </div>
-                            <h1 className="font-f1-display text-3xl md:text-4xl font-black mt-4">
-                                Choisis ton <span className="text-f1-red">garage</span>
-                            </h1>
-                            <p className="text-sm text-f1-silver mt-2 max-w-3xl leading-relaxed">
-                                Bienvenue {userName}. Une team n'est pas juste un logo : c'est un niveau de pression,
-                                un duo pilote, une histoire et une marge de progression pour ta sauvegarde locale.
-                            </p>
-                        </div>
+                    <div className="race-selection-header">
+                        <h2>La grille t'attend, {userName}.</h2>
+                        <p>La pression du titre, le prestige d'une légende ou le défi d'une remontée : à chaque garage, une autre histoire.</p>
                     </div>
 
                     <Card className="p-4 mb-6">
@@ -227,7 +226,7 @@ export default function ChooseTeam() {
                         </div>
                     </Card>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 items-start f1-stagger">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5 items-start f1-stagger">
                         {filteredTeams.map((team) => (
                             <TeamCard
                                 key={team.id ?? team.name}
@@ -236,13 +235,14 @@ export default function ChooseTeam() {
                                 extra={team._extra}
                                 isSelected={(selectedTeam?.id ?? selectedTeam?.name) === (team.id ?? team.name)}
                                 onSelect={() => handleSelect(team)}
+                                onPreview={setPreviewTeam}
                             />
                         ))}
                     </div>
                 </div>
 
                 {/* DROITE */}
-                <Card stripe className="w-full lg:w-96 h-fit p-5 flex flex-col gap-4 shadow-lg lg:sticky lg:top-6">
+                <Card stripe className="w-full lg:w-80 shrink-0 h-fit p-5 flex flex-col gap-4 shadow-lg lg:sticky lg:top-6">
                     <h2 className="font-f1-display text-sm font-bold tracking-widest text-f1-silver uppercase">
                         {selectedTeam ? selectedTeam.name : "Aucune team"}
                     </h2>
@@ -359,6 +359,8 @@ export default function ChooseTeam() {
                         Ton choix est enregistré uniquement dans la session active de ce navigateur.
                     </div>
                 </Card>
+                </div>
+            </div>
         </div>
     );
 }

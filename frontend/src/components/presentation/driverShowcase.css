@@ -1,0 +1,37 @@
+.driver-showcase { position: relative; width: 100%; height: 510px; background: #21272d; isolation: isolate; overflow: hidden; border-block: 1px solid #454b53; letter-spacing: 0; color: #f3f5f7; }
+.driver-stage-media, .driver-model-canvas, .driver-model-canvas canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.driver-model-canvas { cursor: grab; }
+.driver-model-canvas:active { cursor: grabbing; }
+.driver-stage-heading { position: absolute; top: 25px; inset-inline: 30px; display: flex; justify-content: space-between; gap: 15px; pointer-events: none; }
+.driver-stage-heading span { font-size: 10px; font-weight: 700; color: #c5cbd3; }
+.driver-stage-heading h1 { font-family: var(--font-f1-display); font-size: 29px; font-weight: 900; margin-top: 7px; }
+.driver-team-logo { background: #f4f5f6; border-bottom: 3px solid var(--driver-color); width: 88px; height: 66px; padding: 6px; }
+.driver-team-logo img { width: 100%; height: 100%; object-fit: contain; }
+.driver-display-mode { position: absolute; top: 110px; left: 30px; display: flex; border: 1px solid #747b83; border-radius: 5px; overflow: hidden; }
+.driver-display-mode button { padding: 8px 12px; font-size: 11px; background: #20252b; color: #bfc7d1; cursor: pointer; }
+.driver-display-mode button[aria-pressed="true"] { background: #e5e8ed; color: #12181d; font-weight: 800; }
+.driver-showcase button:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+.driver-showcase button:disabled { opacity: .4; cursor: default; }
+.driver-stage-identity { position: absolute; bottom: 95px; left: 30px; max-width: 33%; pointer-events: none; animation: driver-identity-in .3s ease both; }
+.driver-stage-identity > img { height: 104px; width: 100px; object-fit: cover; object-position: top; margin-bottom: 14px; border-bottom: 3px solid var(--driver-color); }
+.driver-stage-identity .driver-firstname { display: block; font-size: 16px; margin-top: 10px; }
+.driver-stage-identity h2 { font-family: var(--font-f1-display); text-transform: uppercase; font-size: 29px; font-weight: 900; overflow-wrap: anywhere; line-height: 1.15; margin-top: 5px; }
+.driver-stage-number { position: absolute; top: 135px; right: 40px; font-family: var(--font-f1-display); font-size: 76px; line-height: 1; font-weight: 900; color: var(--driver-color); pointer-events: none; }
+.driver-portrait-main { position: absolute; height: 85%; max-width: 48%; bottom: 0; left: 50%; transform: translateX(-35%); object-fit: contain; object-position: bottom; }
+.driver-model-note { position: absolute; right: 30px; bottom: 80px; font-size: 10px; color: #aeb7c2; pointer-events: none; }
+.driver-scene-controls { position: absolute; bottom: 20px; left: 30px; display: flex; gap: 5px; }
+.driver-scene-control { position: relative; display: grid; place-items: center; width: 36px; height: 36px; border: 1px solid #6d7682; border-radius: 5px; background: #1e252c; cursor: pointer; }
+.driver-scene-control:hover { border-color: var(--driver-color); color: var(--driver-color); }
+.driver-scene-control > span { position: absolute; bottom: 45px; left: 0; opacity: 0; pointer-events: none; white-space: nowrap; background: #edf0f4; color: #1e2329; padding: 6px 8px; font-size: 11px; border-radius: 4px; }
+.driver-scene-control:hover > span, .driver-scene-control:focus-visible > span { opacity: 1; }
+.driver-back-button { position: absolute; bottom: 20px; right: 30px; display: flex; align-items: center; gap: 7px; border: 1px solid #6d7682; border-radius: 5px; padding: 9px 12px; font-size: 12px; background: #1e252c; cursor: pointer; }
+@keyframes driver-identity-in { from { transform: translateX(-10px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@media (max-width: 700px) {
+ .driver-showcase { height: 590px; } .driver-stage-heading { top: 18px; inset-inline: 18px; } .driver-stage-heading h1 { font-size: 23px; } .driver-team-logo { width: 55px; height: 48px; }
+ .driver-stage-heading span { font-size: 9px; } .driver-display-mode { top: 90px; left: 18px; } .driver-stage-media { top: 112px; height: 330px; }
+ .driver-stage-identity { bottom: 75px; left: 18px; max-width: calc(100% - 36px); display: flex; align-items: center; gap: 12px; }
+ .driver-stage-identity > img { width: 58px; height: 73px; margin: 0; } .driver-stage-identity h2 { font-size: 21px; } .driver-stage-identity .driver-firstname { font-size: 12px; margin-top: 5px; }
+ .driver-stage-number { top: 148px; right: 20px; font-size: 40px; } .driver-model-note { top: 122px; bottom: auto; right: 18px; font-size: 9px; }
+ .driver-portrait-main { height: 100%; max-width: 85%; transform: translateX(-50%); } .driver-scene-controls { left: 18px; bottom: 18px; } .driver-back-button { right: 18px; bottom: 18px; }
+}
+@media (prefers-reduced-motion: reduce) { .driver-showcase * { animation: none !important; transition: none !important; } }

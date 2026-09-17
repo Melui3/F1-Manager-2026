@@ -15,6 +15,9 @@ node_modules/
 dist/
 .vite/
 vite.err
+vite.log
+test-results/
+playwright-report/
 
 # OS
 .DS_Store

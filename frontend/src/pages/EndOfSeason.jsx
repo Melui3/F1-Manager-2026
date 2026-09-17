@@ -167,7 +167,7 @@ export default function EndOfSeason() {
             }
 
             setSim((prev) => ({ ...prev, season: newSeason }));
-            navigate("/start-season");
+            navigate("/calendar");
         } catch (e) {
             console.error(e);
         } finally {

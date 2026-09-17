@@ -2,26 +2,19 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useGame } from "../context/GameContext";
 import { useToast } from "../context/ToastContext";
-import { apiFetch } from "../services/api";
+import { apiFetch, CLIENT_ONLY_MODE } from "../services/api";
+import { earnedBudget } from "../services/raceEconomy";
 import { SESSION_LABEL } from "../data/labels";
 import SessionResultsModal from "../components/modals/SessionResultsModal";
 import WdcModal from "../components/modals/WdcModal";
 import CalendarSection from "../components/season/CalendarSection";
+import RaceCalendar from "../components/season/RaceCalendar";
 import PlayerCard from "../components/season/PlayerCard";
 import ChampionStage from "../components/season/ChampionStage";
 import Button from "../components/ui/Button";
 import ConfirmModal from "../components/modals/ConfirmModal";
 
 // ─── Budget award tables ──────────────────────────────────────────────────────
-
-const GP_BUDGET     = [5,4,3.5,3,2.5,2.2,2,1.8,1.6,1.4,1.2,1,0.9,0.8,0.7,0.6,0.5,0.5,0.4,0.4,0.3,0.3];
-const SPRINT_BUDGET = [2,1.5,1.2,1,0.8,0.7,0.6,0.5,0.5,0.4,0.4,0.3,0.3,0.3,0.2,0.2,0.2,0.2,0.2,0.1,0.1,0.1];
-
-function earnedBudget(position, sessionType) {
-    const table = sessionType === "GP" ? GP_BUDGET : SPRINT_BUDGET;
-    const idx = Math.max(0, (position || 22) - 1);
-    return (table[idx] ?? 1) * 1_000_000;
-}
 
 function fmtBudget(value) {
     const millions = (Number(value) || 0) / 1_000_000;
@@ -100,7 +93,7 @@ function buildSessionRecap(results, player, meta, earned = 0) {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function StartSeason() {
-    const { team, driver, sim, setDriver, setSim } = useGame();
+    const { team, driver, sim, setDriver, setSim, activeSessionId } = useGame();
     const navigate = useNavigate();
     const { addToast } = useToast();
     const season = sim?.season ?? 2026;
@@ -109,6 +102,7 @@ export default function StartSeason() {
     const [calendar, setCalendar] = useState([]);
     const [driversBoard, setDriversBoard] = useState([]);
     const [budget, setBudget] = useState(0);
+    const [liveRace, setLiveRace] = useState(null);
 
     const [loading, setLoading] = useState(true);
     const [simLoading, setSimLoading] = useState(false);
@@ -220,15 +214,16 @@ export default function StartSeason() {
         return list;
     }, [nextSession, teammate, teammateRank, playerRank, driver?.surname, budget]);
 
-    const isBusy = simLoading || simAllLoading;
+    const isBusy = simLoading || simAllLoading || liveRace?.status === "racing";
 
     // ── Effects ────────────────────────────────────────────────────────────────
 
     async function refreshAll() {
-        const [cal, board, budgetRes] = await Promise.all([
+        const [cal, board, budgetRes, live] = await Promise.all([
             apiFetch("/api/season/calendar/"),
             apiFetch("/api/drivers/"),
             apiFetch("/api/season/budget/"),
+            CLIENT_ONLY_MODE ? apiFetch("/api/live-race/") : Promise.resolve(null),
         ]);
         const nextCalendarData = Array.isArray(cal) ? cal : [];
         const nextBoardData = Array.isArray(board) ? board : [];
@@ -237,6 +232,7 @@ export default function StartSeason() {
         setCalendar(nextCalendarData);
         setDriversBoard(nextBoardData);
         setBudget(nextBudget);
+        setLiveRace(live?.race ?? null);
 
         return { calendar: nextCalendarData, board: nextBoardData, budget: nextBudget };
     }
@@ -254,7 +250,7 @@ export default function StartSeason() {
                 setLoading(false);
             }
         })();
-    }, []);
+    }, [activeSessionId]);
 
     useEffect(() => {
         if (!playerRow) return;
@@ -561,7 +557,19 @@ export default function StartSeason() {
 
     return (
         <div className="flex-1 flex flex-col">
-            {seasonDone && (
+            {CLIENT_ONLY_MODE && <RaceCalendar calendar={calendar} liveRace={liveRace} driver={driver} team={team} season={season} budget={budget} playerRank={playerRank} playerPoints={playerPoints} loading={loading} error={error} champion={currentChampion}
+                onReset={() => setActiveModal("reset-season")} onStandings={() => navigate("/standings")}
+                onResults={(session) => {
+                    setLastResults(session.results ?? []);
+                    setLastSessionMeta(session);
+                    const recap = buildSessionRecap(session.results, driver, session);
+                    setLastSummary(recap);
+                    setLastEvents(recap.events);
+                    setLastBudgetAward(null);
+                    setPrevPlayerStats(null);
+                    setActiveModal("session");
+                }} />}
+            {!CLIENT_ONLY_MODE && seasonDone && (
                 <div className="w-full px-4 md:px-6 lg:px-8 pt-4 md:pt-6 lg:pt-8">
                     <div className="relative">
                         <ChampionStage champion={currentChampion} player={driver} season={season} compact />
@@ -573,7 +581,8 @@ export default function StartSeason() {
                     </div>
                 </div>
             )}
-            <div className="flex-1 p-4 md:p-6 lg:p-8 flex flex-col lg:flex-row gap-6 lg:gap-8">
+            <div className={CLIENT_ONLY_MODE ? "" : "flex-1 p-4 md:p-6 lg:p-8 flex flex-col lg:flex-row gap-6 lg:gap-8"}>
+            {!CLIENT_ONLY_MODE && <>
             <CalendarSection
                 loading={loading}
                 error={error}
@@ -613,6 +622,7 @@ export default function StartSeason() {
                 onOpenWdc={openWdc}
                 budget={budget}
             />
+            </>}
 
             <SessionResultsModal
                 open={activeModal === "session"}

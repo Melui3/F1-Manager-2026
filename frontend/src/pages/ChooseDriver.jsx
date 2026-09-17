@@ -1,13 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-    ArrowLeft,
     Gauge,
     ShieldCheck,
     Sparkles,
     Target,
     Trophy,
-    Users,
     Zap,
 } from "lucide-react";
 import { useGame } from "../context/GameContext";
@@ -16,6 +14,7 @@ import FlagBadge from "../components/ui/FlagBadge";
 import { apiFetch } from "../services/api";
 import Button from "../components/ui/Button";
 import Card from "../components/ui/Card";
+import DriverShowcase from "../components/presentation/DriverShowcase";
 
 const norm = (s) => String(s ?? "").trim().toLowerCase();
 
@@ -165,10 +164,12 @@ export default function ChooseDriver() {
     const [drivers, setDrivers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [priority, setPriority] = useState("balanced");
+    const [previewDriver, setPreviewDriver] = useState(null);
 
     const navigate = useNavigate();
 
     useEffect(() => {
+        window.scrollTo({ top: 0, behavior: "instant" });
         async function load() {
             try {
                 setLoading(true);
@@ -244,47 +245,20 @@ export default function ChooseDriver() {
     return (
         <div className="flex-1 p-4 sm:p-6 f1-fade-in">
             <div className="mx-auto max-w-7xl space-y-6">
-                <section className="relative overflow-hidden rounded-2xl border border-f1-border bg-f1-surface p-5 sm:p-6 shadow-2xl">
-                    <div className="pointer-events-none absolute inset-y-0 right-0 w-1/2 bg-gradient-to-l from-f1-red/18 to-transparent" />
-                    <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-                        <div className="max-w-3xl">
-                            <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-f1-border bg-f1-dark/45 px-3 py-1 text-xs font-semibold text-f1-silver">
-                                <Users size={14} aria-hidden="true" />
-                                Duo pilote {teamName}
-                            </div>
-                            <h1 className="font-f1-display text-3xl sm:text-4xl font-black uppercase leading-tight">
-                                Choisis ton <span className="text-f1-red">pilote</span>
-                            </h1>
-                            <p className="mt-3 max-w-2xl text-sm sm:text-base text-f1-silver leading-relaxed">
-                                Ton pilote définit le style de ta saison : attaque en qualification, régularité en course,
-                                gestion des erreurs et adaptation aux circuits. Sélectionne la priorité, compare les jauges,
-                                puis valide le baquet.
-                            </p>
-                        </div>
-
-                        <Button
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => {
+                <DriverShowcase team={team} driver={previewDriver ?? selectedDriver ?? recommendedDriver} onBack={() => {
                                 setSelectedDriverLocal(null);
                                 setDriver(null);
                                 navigate("/choose-team");
-                            }}
-                        >
-                            <ArrowLeft size={16} aria-hidden="true" />
-                            Retour teams
-                        </Button>
-                    </div>
-                </section>
+                            }} />
 
                 <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
                     <main className="space-y-5">
-                        <Card className="p-4 sm:p-5">
+                        <section className="race-driver-strategy">
                             <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                                 <div>
                                     <div className="f1-label">Priorité stratégique</div>
                                     <h2 className="font-f1-display text-lg font-bold text-f1-white">
-                                        La recommandation s'adapte à ce que tu veux jouer.
+                                        Deux pilotes. Ton choix.
                                     </h2>
                                     <p className="mt-1 text-sm text-f1-muted">
                                         Actuel : {activePriority.label} - {activePriority.hint}.
@@ -292,7 +266,7 @@ export default function ChooseDriver() {
                                 </div>
 
                                 <div
-                                    className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:min-w-[34rem]"
+                                    className="grid grid-cols-2 gap-2 sm:grid-cols-4"
                                     role="group"
                                     aria-label="Priorité de comparaison des pilotes"
                                 >
@@ -306,7 +280,7 @@ export default function ChooseDriver() {
                                     ))}
                                 </div>
                             </div>
-                        </Card>
+                        </section>
 
                         {loading ? (
                             <div className="flex items-center gap-3 text-f1-silver">
@@ -326,6 +300,7 @@ export default function ChooseDriver() {
                                         badge={sameDriver(d, recommendedDriver) ? "Recommandé" : null}
                                         isSelected={sameDriver(selectedDriver, d)}
                                         onSelect={() => handleSelect(d)}
+                                        onPreview={setPreviewDriver}
                                     />
                                 ))}
                             </div>
@@ -386,7 +361,7 @@ export default function ChooseDriver() {
                                 </div>
                             )}
 
-                            <Button onClick={() => navigate("/start-season")} disabled={!selectedDriver} fullWidth>
+                            <Button onClick={() => navigate("/calendar")} disabled={!selectedDriver} fullWidth>
                                 Valider ce pilote
                             </Button>
 
