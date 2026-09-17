@@ -13,18 +13,8 @@ import GameLayout   from "./components/GameLayout.jsx";
 import SetupLayout  from "./components/SetupLayout.jsx";
 import { useGame }  from "./context/GameContext";
 import { ToastProvider } from "./context/ToastContext.jsx";
-import { CLIENT_ONLY_MODE } from "./services/api.js";
 import { RacePresentationProvider } from "./components/presentation/RacePresentation";
 const LiveRace = lazy(() => import("./pages/LiveRace"));
-
-function DemoBanner() {
-    if (!CLIENT_ONLY_MODE) return null;
-    return (
-        <div className="w-full bg-f1-yellow/10 border-b border-f1-yellow/30 text-f1-yellow text-center text-xs font-semibold py-1.5 tracking-wide">
-            Mode client-only - aucun serveur requis, sauvegarde locale dans le navigateur
-        </div>
-    );
-}
 
 function HomeRedirect() {
     const { ready, isAuthenticated, team, driver } = useGame();
@@ -38,7 +28,6 @@ export default function App() {
     return (
         <ToastProvider>
             <RacePresentationProvider>
-            <DemoBanner />
             <Routes>
                 <Route path="/"         element={<HomeRedirect />} />
                 <Route path="/login"    element={<LoginScreen />} />

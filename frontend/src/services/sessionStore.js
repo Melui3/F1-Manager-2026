@@ -86,8 +86,6 @@ export function migrateLegacySession() {
                 userName: profile.name,
                 avatarKey: profile.avatarKey,
                 userAvatar: null,
-                accessToken: "local-token",
-                refreshToken: "local-refresh",
             })
         );
     }
@@ -145,8 +143,6 @@ export function createSessionProfile(name, avatarKey = "verstappen") {
             userName: profile.name,
             avatarKey: profile.avatarKey,
             userAvatar: null,
-            accessToken: "local-token",
-            refreshToken: "local-refresh",
         })
     );
     return profile;

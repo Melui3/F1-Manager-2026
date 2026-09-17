@@ -1,4 +1,6 @@
 # Python
+# Preserve any old local databases, secrets and virtual environments outside Git.
+/backend/
 .venv/
 __pycache__/
 *.pyc

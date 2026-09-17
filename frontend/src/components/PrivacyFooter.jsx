@@ -1,5 +1,4 @@
 import { Download, ExternalLink, HardDrive, ShieldCheck, Trash2 } from "lucide-react";
-import { CLIENT_ONLY_MODE } from "../services/api";
 
 const CNIL_RIGHTS_URL = "https://www.cnil.fr/fr/mes-demarches/les-droits-pour-maitriser-vos-donnees-personnelles";
 
@@ -24,9 +23,7 @@ export default function PrivacyFooter() {
                         RGPD & vie privee
                     </div>
                     <p className="mt-2 text-xs leading-relaxed text-f1-muted">
-                        {CLIENT_ONLY_MODE
-                            ? "Mode client-only : la sauvegarde, le budget, les choix d'ecurie et les resultats restent dans le stockage local de ce navigateur."
-                            : "Les donnees de session servent uniquement a faire fonctionner la sauvegarde et la simulation du manager."}
+                        La sauvegarde, le budget, les choix d'ecurie et les resultats restent dans le stockage local de ce navigateur.
                         {" "}Tu peux exporter tes donnees, changer de session ou supprimer la sauvegarde locale depuis Mon equipe.
                     </p>
                 </div>

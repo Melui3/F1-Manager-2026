@@ -27,6 +27,7 @@ globalThis.localStorage = new MemoryStorage();
 
 const sessionStore = await import("../src/services/sessionStore.js");
 const mockApi = await import("../src/services/mockApi.js");
+const { apiFetch } = await import("../src/services/api.js");
 const liveEngine = await import("../src/services/liveRaceEngine.js");
 const { getSeasonRounds } = await import("../src/services/seasonCalendar.js");
 
@@ -335,7 +336,29 @@ function testCalendarRoundProgressionAndSprint() {
     assert.equal(result.upcoming.length, 0);
 }
 
+async function testLocalApiDoesNotCallServer() {
+    resetStorage();
+    const profile = sessionStore.createSessionProfile("Sans serveur", "hamilton");
+    const key = sessionStore.getScopedStorageKey("user", profile.id);
+    const user = JSON.parse(localStorage.getItem(key));
+    assert.equal(user.accessToken, undefined);
+    assert.equal(user.refreshToken, undefined);
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = () => { throw new Error("Unexpected network request"); };
+    try {
+        const drivers = await apiFetch("/api/drivers/");
+        assert.equal(drivers.length, 22);
+        const calendar = await apiFetch("/api/season/calendar/");
+        assert.equal(getSeasonRounds(calendar).rounds.length, 24);
+        await apiFetch("/api/season/reset/", { method: "POST", body: JSON.stringify({ full: true, keepSeason: true }) });
+        assert.equal((await apiFetch("/api/live-race/")).race, null);
+    } finally {
+        globalThis.fetch = originalFetch;
+    }
+}
+
 const tests = [
+    testLocalApiDoesNotCallServer,
     testSessionScoping,
     testSessionExportImport,
     testSimulationResultsKeepCountry,
@@ -355,7 +378,7 @@ const tests = [
 ];
 
 for (const test of tests) {
-    test();
+    await test();
     console.log(`ok - ${test.name}`);
 }
 

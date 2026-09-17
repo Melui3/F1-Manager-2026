@@ -1,16 +1,23 @@
-# React + Vite
+# F1 Manager 2026 - Application navigateur
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Tout le jeu fonctionne localement dans le navigateur, sans backend ni compte
+serveur. Les donnees de partie sont stockees par profil dans localStorage.
 
-Currently, two official plugins are available:
+## Commandes
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- `npm ci` : installer les dependances.
+- `npm run dev` : lancer Vite pour le developpement.
+- `npm test` : tester le moteur, l'economie et les sauvegardes.
+- `npm run test:ui` : tester les parcours utilisateur et le rendu 3D.
+- `npm run build` : compiler le site statique dans `dist`.
+- `npm run preview` : servir le build localement.
+- `npm run test:production` : tester le build au chemin GitHub Pages.
 
-## React Compiler
+Les tests navigateur necessitent `npx playwright install chromium` ou
+`PLAYWRIGHT_CHANNEL=chrome` pour un Chrome installe.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Publication
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Les pushes sur `main` declenchent le workflow GitHub Pages a la racine du depot.
+Il n'y a plus de commande de deploiement manuelle vers `gh-pages`.
+Voir le [README du projet](../README.md) pour le site public et la configuration.

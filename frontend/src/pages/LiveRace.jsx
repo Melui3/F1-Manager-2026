@@ -2,7 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react"
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Camera, Check, ChevronRight, CloudRain, Flag, Gauge, Pause, Play, Radio, RotateCcw, Shield, SkipForward, Sun, Trophy, Wrench, X, Zap } from "lucide-react";
 import { useGame } from "../context/GameContext";
-import { apiFetch, CLIENT_ONLY_MODE } from "../services/api";
+import { apiFetch } from "../services/api";
 import { ALLOWED_LAPS, PACES, PIT_COST, TYRES, weatherAt } from "../services/liveRaceEngine";
 import { getTeamLivery } from "../data/teamLiveries";
 import { driverPortrait } from "../data/visualAssets";
@@ -86,7 +86,6 @@ export default function LiveRace() {
         if (!ready) return;
         if (!activeSessionId) { navigate("/login", { replace: true }); return; }
         if (!team || !driver) { navigate("/choose-team", { replace: true }); return; }
-        if (!CLIENT_ONLY_MODE) { setLoading(false); return; }
         let cancelled = false;
         setLoading(true);
         setPaused(true);
@@ -223,7 +222,6 @@ export default function LiveRace() {
     }
 
     if (loading || !player) return <div className="live-race-loading"><span className="f1-spinner" /> Ouverture du pit wall…</div>;
-    if (!CLIENT_ONLY_MODE) return <div className="live-race-empty"><h1>Course en direct</h1><p>Ce mode est disponible dans les parties locales.</p><button onClick={() => navigate("/calendar")}>Retour au calendrier</button></div>;
     if (routeError || (!session && error)) return <div className="live-race-empty" role="alert"><h1>Course indisponible</h1><p>{routeError ?? error}</p><button onClick={() => navigate("/calendar")}>Retour au calendrier</button></div>;
     if (!session) return <div className="live-race-empty"><Trophy size={42} /><h1>La saison est terminée</h1><button onClick={() => navigate("/end-of-season")}>Voir le bilan</button></div>;
 

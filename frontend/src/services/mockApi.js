@@ -3,8 +3,8 @@ import { advanceLiveRace, createLiveRace, setRaceCommand, ALLOWED_LAPS, TYRES } 
 import { earnedBudget } from "./raceEconomy.js";
 
 // ============================================================================
-// F1 Manager 2026 — Mock API  (demo mode, aucun backend requis)
-// Port fidèle de backend/f1/legacy/driver.py et session.py
+// F1 Manager 2026 — Moteur local et commandes de jeu.
+// Le nom du fichier est conserve pour compatibilite avec les tests existants.
 // ============================================================================
 
 const STATE_KEY = "f1m26_mock";
@@ -13,7 +13,7 @@ function currentStateKey() {
     return getScopedStorageKey("mock") || STATE_KEY;
 }
 
-// ─── Données seed (identiques au backend) ───────────────────────────────────
+// ─── Données initiales de la saison ────────────────────────────────────────
 
 const SEED_DRIVERS = [
     { id:1,  name:"Charles",     surname:"Leclerc",    team:"Scuderia Ferrari HP",                    country:"Monaco", number:16, speed:9,  racing:9,  reaction:9, experience:8,  consistency:90, error_rate:5, street_circuit_affinity:8, high_speed_circuit_affinity:9,  wet_circuit_affinity:7 },

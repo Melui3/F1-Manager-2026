@@ -1,94 +1,77 @@
 # F1 Manager 2026
 
-Application web de simulation et de gestion inspirée de l’univers de la Formule 1.  
-Le projet permet de choisir une écurie, sélectionner un pilote, lancer une saison 2026, simuler les sessions de Grand Prix et suivre l’évolution du classement, du budget et des performances.
+Jeu de management F1 dans le navigateur : profils locaux, choix de l'ecurie et
+du pilote, calendrier, courses 3D, classements et gestion du budget.
 
-## Aperçu
+**Jouer : https://melui3.github.io/F1-Manager-2026/**
 
-F1 Manager 2026 est pensé comme un jeu de management léger autour d’une saison fictive 2026.
+## Application locale, hebergement statique
 
-L’utilisateur peut :
+Le jeu fonctionne uniquement cote navigateur. Il n'y a plus de backend Django,
+de base de donnees distante, d'authentification serveur ni de token requis.
+Le moteur de simulation et les sauvegardes font partie de l'application React.
+Les anciennes variables `VITE_API_BASE` et `VITE_DEMO_MODE` ne sont plus utilisees.
 
-- créer ou utiliser un profil ;
-- choisir une écurie ;
-- sélectionner un pilote ;
-- lancer une saison complète ;
-- simuler les essais libres, qualifications, sprints et Grands Prix ;
-- suivre le classement pilotes ;
-- consulter les résultats de session ;
-- observer l’évolution des statistiques du pilote ;
-- gérer un budget lié aux performances en course.
+Chaque manager possede sa propre sauvegarde dans le stockage local du navigateur.
+Les sauvegardes existantes restent compatibles. Export/import JSON, changement
+de profil et remise a zero complete sont disponibles dans Mon Equipe.
+Changer de navigateur ou d'origine (localhost / GitHub Pages) ne transfere pas
+automatiquement les parties : utiliser l'export/import pour les retrouver.
 
-Le projet inclut également un mode démo permettant de tester l’application sans backend.
+L'ancien backend est retire du depot ; son code reste dans l'historique Git.
+Aucun hebergement de serveur Python n'est necessaire.
 
-## Stack technique
+## Developpement
 
-### Frontend
+Node.js 22.12+ ou 24 LTS et npm :
 
-- React 19
-- Vite
-- Tailwind CSS 4
-- React Router DOM
-- Lucide React
-- Three.js pour les garages et presentations 3D
-- gh-pages pour le déploiement
-
-### Données et état
-
-- Context API React
-- localStorage pour la persistance utilisateur et partie
-- API centralisée via un service `apiFetch`
-- Mock API côté client pour le mode démo
-
-## Fonctionnalités principales
-
-### Authentification
-
-L’application prévoit un système de connexion et d’inscription avec gestion de tokens.
-
-Les tokens sont stockés localement et utilisés automatiquement pour les appels API.  
-Un mécanisme de refresh token est prévu en cas de réponse `401`.
-
-### Mode démo
-
-Le mode démo permet d’utiliser l’application sans compte réel et sans backend.
-
-Il simule :
-
-- les pilotes ;
-- les équipes ;
-- le calendrier 2026 ;
-- les sessions ;
-- les résultats ;
-- le budget ;
-- l’évolution des statistiques.
-
-Pour l’activer :
-
-```env
-VITE_DEMO_MODE=true
-VITE_API_BASE=
+```bash
+cd frontend
+npm ci
+npm run dev
 ```
 
-En production, le projet est configure pour tourner en mode client-only par defaut.
-Toute la partie jeu est stockee dans `localStorage` :
+Ouvrir l'adresse affichee par Vite. Aucun fichier `.env` n'est requis.
 
-- profils managers multiples et avatars ;
-- choix de l'ecurie et du pilote ;
-- calendrier, resultats et historique des sessions ;
-- budget, entrainement pilote et R&D ecurie ;
-- export/import de sauvegarde depuis la page `Mon Equipe`.
-
-L'ecran d'accueil sert de hub de sessions locales : creer un manager, reprendre
-une session, rafraichir la liste, remettre une partie a zero ou supprimer une
-sauvegarde. Il n'y a plus de connexion obligatoire en mode client-only.
-
-Pour rebrancher un backend plus tard :
-
-```env
-VITE_DEMO_MODE=false
-VITE_API_BASE=https://ton-api.example.com
+```bash
+npm test
+npx playwright install chromium
+npm run test:ui
+npm run build
+npm run test:production
 ```
+
+Le test de production sert le build avec le sous-chemin GitHub Pages et verifie
+les assets, la sauvegarde, le reset et le parcours calendrier vers course 3D
+sans aucune requete backend. Pour utiliser Chrome installe, definir
+`PLAYWRIGHT_CHANNEL=chrome`.
+
+## Publication GitHub Pages
+
+Le workflow `.github/workflows/pages.yml` compile et teste le jeu a chaque push
+sur `main`, puis publie l'artefact `frontend/dist` avec GitHub Actions.
+GitHub Pages doit utiliser la source **GitHub Actions**, pas la branche
+historique `gh-pages`. Le workflow est aussi declenchable manuellement depuis
+l'onglet Actions du depot.
+
+Un push n'est publie qu'apres le succes du job Deploy. L'URL publique ne change
+pas. Le fichier `/F1-Manager-2026/version.json` indique le commit et la date du
+build effectivement servi. Les anciens liens `#/start-season` redirigent vers
+`#/calendar`. Les assets sont versionnes par Vite ; aucun service worker ne
+conserve une ancienne application.
+
+Pour verifier le site public avec le meme test, definir
+`PLAYWRIGHT_BASE_URL=https://melui3.github.io/F1-Manager-2026/` avant
+`npm run test:production`. Ce test utilise une session de navigateur isolee.
+
+## Stack
+
+React 19, Vite, Tailwind CSS 4, React Router, Lucide et Three.js.
+Context API et localStorage pour les profils ; commandes de jeu locales
+centralisees dans `frontend/src/services/api.js`. Le nom historique
+`mockApi.js` designe le moteur local, pas un service distant.
+
+## Jeu
 
 ### Garage 3D
 
@@ -135,9 +118,8 @@ Depuis `/#/calendar`, choisir `Simuler` sur la manche actuelle pour ouvrir
 affiche `Reprendre`. Les resultats termines sont places au-dessus de la manche
 actuelle et les week-ends a venir en dessous. Les anciens liens `start-season`
 et `race-live` restent compatibles. Les manches futures ne peuvent pas etre
-jouees hors ordre par un lien direct. Le mode client-only n'expose plus de
-bouton de simulation rapide concurrent. Le mode backend conserve son ancien
-calendrier. Le pit wall propose une course de 8, 10 ou 12 tours avec :
+jouees hors ordre par un lien direct. Le pit wall propose une course de
+8, 10 ou 12 tours avec :
 
 - une piste 3D animee, une vue d'ensemble manipulable et une camera de suivi ;
 - une grille issue des qualifications, preparees automatiquement si necessaire ;

@@ -49,8 +49,6 @@ export function GameProvider({ children }) {
     const [userName, setUserName] = useState("");
     const [avatarKey, setAvatarKey] = useState(null);
     const [userAvatar, setUserAvatar] = useState(null);
-    const [accessToken, setAccessToken] = useState(null);
-    const [refreshToken, setRefreshToken] = useState(null);
 
     const [team, setTeam] = useState(null);
     const [driver, setDriver] = useState(null);
@@ -60,8 +58,6 @@ export function GameProvider({ children }) {
         setUserName("");
         setAvatarKey(null);
         setUserAvatar(null);
-        setAccessToken(null);
-        setRefreshToken(null);
         setTeam(null);
         setDriver(null);
         setSim(defaultSim());
@@ -90,8 +86,6 @@ export function GameProvider({ children }) {
         setUserName(u.userName || u.username || "");
         setAvatarKey(nextAvatarKey);
         setUserAvatar(nextAvatarUrl ? normalizeUrl(nextAvatarUrl) : avatarUrlFromKey(nextAvatarKey));
-        setAccessToken(u.accessToken || u.access || "local-token");
-        setRefreshToken(u.refreshToken || u.refresh || "local-refresh");
         setTeam(g.team || null);
         setDriver(g.driver || null);
         setSim(g.sim || defaultSim());
@@ -114,13 +108,11 @@ export function GameProvider({ children }) {
                 userName,
                 avatarKey,
                 userAvatar,
-                accessToken,
-                refreshToken,
             })
         );
 
         updateActiveSessionMeta({ name: userName || "Manager", avatarKey: avatarKey || "verstappen" });
-    }, [ready, activeSessionId, userName, avatarKey, userAvatar, accessToken, refreshToken]);
+    }, [ready, activeSessionId, userName, avatarKey, userAvatar]);
 
     useEffect(() => {
         if (!ready || !activeSessionId) return;
@@ -144,26 +136,6 @@ export function GameProvider({ children }) {
 
     const refreshSession = () => {
         loadSession(activeSessionId || getActiveSessionId());
-    };
-
-    const applyLogin = ({ tokens, me, fallbackUsername }) => {
-        const access = tokens?.access || "local-token";
-        const refresh = tokens?.refresh || "local-refresh";
-        const name = me?.username || fallbackUsername || userName || "Manager";
-        const aKey = me?.avatar_key || avatarKey || "verstappen";
-        const aUrl = me?.avatar_url || null;
-
-        setAccessToken(access);
-        setRefreshToken(refresh);
-        setUserName(name);
-
-        if (aUrl) {
-            setUserAvatar(normalizeUrl(aUrl));
-            setAvatarKey(aKey);
-        } else {
-            setAvatarKey(aKey);
-            setUserAvatar(avatarUrlFromKey(aKey));
-        }
     };
 
     const applyAvatar = ({ avatar_key }) => {
@@ -198,12 +170,7 @@ export function GameProvider({ children }) {
                 userAvatar,
                 setUserAvatar,
 
-                accessToken,
-                refreshToken,
-                setAccessToken,
-                setRefreshToken,
                 isAuthenticated,
-                applyLogin,
                 applyAvatar,
                 logout,
 

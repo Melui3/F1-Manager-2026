@@ -24,7 +24,6 @@ import { TEAM_COLOR, SESSION_LABEL } from "../data/labels";
 import FlagBadge from "../components/ui/FlagBadge";
 import {
     apiFetch,
-    CLIENT_ONLY_MODE,
     clearLocalSave,
     exportLocalSave,
     importLocalSave,
@@ -384,11 +383,9 @@ export default function Profile() {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
-                    {CLIENT_ONLY_MODE && (
-                        <span className="inline-flex items-center gap-2 rounded-xl border border-f1-yellow/30 bg-f1-yellow/10 px-3 py-2 text-xs font-bold text-f1-yellow">
-                            <HardDrive className="h-3.5 w-3.5" /> Client-only
-                        </span>
-                    )}
+                    <span className="inline-flex items-center gap-2 rounded-xl border border-f1-yellow/30 bg-f1-yellow/10 px-3 py-2 text-xs font-bold text-f1-yellow">
+                        <HardDrive className="h-3.5 w-3.5" /> Sauvegarde locale
+                    </span>
                     <Button variant="secondary" onClick={refreshProfileData}>
                         <RefreshCw className="h-4 w-4" /> Actualiser
                     </Button>

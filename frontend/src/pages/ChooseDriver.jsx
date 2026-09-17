@@ -9,7 +9,7 @@ import {
     Zap,
 } from "lucide-react";
 import { useGame } from "../context/GameContext";
-import DriverCard from "../components/DriverCard";
+import DriverCard from "../components/driverCard";
 import FlagBadge from "../components/ui/FlagBadge";
 import { apiFetch } from "../services/api";
 import Button from "../components/ui/Button";

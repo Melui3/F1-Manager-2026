@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Filter, Gauge, ShieldCheck, Trophy, Users, Wrench } from "lucide-react";
 import { useGame } from "../context/GameContext";
-import TeamCard from "../components/TeamCard.jsx";
+import TeamCard from "../components/teamCard.jsx";
 import { apiFetch } from "../services/api.js";
 import { TEAM_EXTRA } from "../data/teamExtra.js";
 import Button from "../components/ui/Button";

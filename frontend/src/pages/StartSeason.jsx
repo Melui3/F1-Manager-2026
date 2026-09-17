@@ -1,43 +1,17 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useGame } from "../context/GameContext";
-import { useToast } from "../context/ToastContext";
-import { apiFetch, CLIENT_ONLY_MODE } from "../services/api";
-import { earnedBudget } from "../services/raceEconomy";
+import { apiFetch } from "../services/api";
 import { SESSION_LABEL } from "../data/labels";
 import SessionResultsModal from "../components/modals/SessionResultsModal";
-import WdcModal from "../components/modals/WdcModal";
-import CalendarSection from "../components/season/CalendarSection";
 import RaceCalendar from "../components/season/RaceCalendar";
-import PlayerCard from "../components/season/PlayerCard";
-import ChampionStage from "../components/season/ChampionStage";
 import Button from "../components/ui/Button";
 import ConfirmModal from "../components/modals/ConfirmModal";
-
-// ─── Budget award tables ──────────────────────────────────────────────────────
 
 function fmtBudget(value) {
     const millions = (Number(value) || 0) / 1_000_000;
     return `${millions >= 10 ? Math.round(millions) : millions.toFixed(1)}M`;
 }
-
-// ─── Team border styles ───────────────────────────────────────────────────────
-
-const TEAM_STYLE = {
-    "Oracle Red Bull Racing":                 "border-blue-500/60",
-    "Scuderia Ferrari HP":                    "border-red-500/70",
-    "Mercedes-AMG Petronas Formula One Team": "border-emerald-400/60",
-    "McLaren Mastercard Formula 1 Team":      "border-orange-400/70",
-    "Aston Martin Aramco Formula One Team":   "border-emerald-500/60",
-    "BWT Alpine F1 Team":                     "border-sky-400/60",
-    "Audi F1 Team (Revolut)":                 "border-zinc-200/40",
-    "Cadillac Formula One Team":              "border-yellow-400/60",
-    "TGR Hass F1 Team":                       "border-gray-200/40",
-    "Atlassian Williams Racing":              "border-sky-500/60",
-    "Visa Cash App Racing Bulls F1 Team":     "border-indigo-400/60",
-};
-
-// ─── Driver matching ──────────────────────────────────────────────────────────
 
 const clean = (s) =>
     String(s ?? "").trim().toLowerCase().normalize("NFD")
@@ -90,577 +64,114 @@ function buildSessionRecap(results, player, meta, earned = 0) {
     };
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
+
+async function loadSeasonData() {
+    const [calendar, board, budget, live] = await Promise.all([
+        apiFetch("/api/season/calendar/"),
+        apiFetch("/api/drivers/"),
+        apiFetch("/api/season/budget/"),
+        apiFetch("/api/live-race/"),
+    ]);
+    return { calendar, board, budget: budget.budget, liveRace: live.race };
+}
 
 export default function StartSeason() {
     const { team, driver, sim, setDriver, setSim, activeSessionId } = useGame();
     const navigate = useNavigate();
-    const { addToast } = useToast();
     const season = sim?.season ?? 2026;
-
-    const [expandedGp, setExpandedGp] = useState(null);
-    const [calendar, setCalendar] = useState([]);
-    const [driversBoard, setDriversBoard] = useState([]);
-    const [budget, setBudget] = useState(0);
-    const [liveRace, setLiveRace] = useState(null);
-
+    const [data, setData] = useState({ calendar: [], board: [], budget: 0, liveRace: null });
     const [loading, setLoading] = useState(true);
-    const [simLoading, setSimLoading] = useState(false);
+    const [resetting, setResetting] = useState(false);
     const [error, setError] = useState(null);
-
-    const [lastResults, setLastResults] = useState([]);
-    const [lastSessionMeta, setLastSessionMeta] = useState(null);
-    const [lastEvents, setLastEvents] = useState([]);
-    const [lastSummary, setLastSummary] = useState(null);
-    const [lastBudgetAward, setLastBudgetAward] = useState(null);
-
-    const [prevPlayerStats, setPrevPlayerStats] = useState(null);
-    const [playerStats, setPlayerStats] = useState(null);
-
-    const [activeModal, setActiveModal] = useState(null);
-
-    const [wdcBoard, setWdcBoard] = useState([]);
-    const [wdcLoading, setWdcLoading] = useState(false);
-    const [wdcError, setWdcError] = useState(null);
-
-    const [simAllLoading, setSimAllLoading] = useState(false);
-    const [simAllProgress, setSimAllProgress] = useState({ done: 0, total: 0 });
-    const simAllAbortRef = useRef(false);
-
-    // ── Derived state ──────────────────────────────────────────────────────────
-
-    const calendarByGp = useMemo(() => {
-        const map = {};
-        for (const s of calendar) {
-            const gp = s?.gp_name ?? "GP inconnu";
-            if (!map[gp]) map[gp] = [];
-            map[gp].push(s);
-        }
-        for (const k of Object.keys(map)) {
-            map[k].sort((a, b) => (a?.index ?? 0) - (b?.index ?? 0));
-        }
-        return map;
-    }, [calendar]);
-
-    const gpNames = useMemo(() => Object.keys(calendarByGp), [calendarByGp]);
-
-    const flatSessions = useMemo(() => {
-        const arr = Array.isArray(calendar) ? [...calendar] : [];
-        arr.sort((a, b) => (a?.index ?? 0) - (b?.index ?? 0));
-        return arr;
-    }, [calendar]);
-
-    const nextSession = useMemo(() => flatSessions.find((s) => !s?.is_simulated) || null, [flatSessions]);
-
-    const totalSessions = flatSessions.length;
-    const simulatedSessions = flatSessions.filter((s) => !!s.is_simulated).length;
-
-    const playerRow = useMemo(() => driversBoard.find((d) => isSameDriver(d, driver)) || null, [driversBoard, driver]);
-    const playerPoints = playerRow?.points ?? 0;
-
-    const seasonDone = useMemo(
-        () => Array.isArray(calendar) && calendar.length > 0 && calendar.every((s) => !!s.is_simulated),
-        [calendar]
-    );
-
-    const playerRank = useMemo(
-        () => driversBoard.findIndex((d) => isSameDriver(d, driver)) + 1,
-        [driversBoard, driver]
-    );
-
-    const teammate = useMemo(
-        () => driversBoard.find((d) => d?.team === team?.name && !isSameDriver(d, driver)) || null,
-        [driversBoard, team?.name, driver]
-    );
-
-    const teammateRank = useMemo(
-        () => teammate ? driversBoard.findIndex((d) => isSameDriver(d, teammate)) + 1 : null,
-        [driversBoard, teammate]
-    );
-
-    const currentChampion = useMemo(() => {
-        if (!driversBoard.length) return null;
-        return [...driversBoard].sort((a, b) => (b.points ?? 0) - (a.points ?? 0) || (b.wins ?? 0) - (a.wins ?? 0))[0] || null;
-    }, [driversBoard]);
-
-    const dynamicObjectives = useMemo(() => {
-        const list = [];
-        const nextLabel = nextSession
-            ? `${nextSession.gp_name} - ${SESSION_LABEL[nextSession.session_type] ?? nextSession.session_type}`
-            : "Saison terminee";
-
-        list.push({
-            label: "Prochain objectif",
-            value: nextSession ? `Top 10 sur ${nextLabel}` : "Toutes les sessions sont terminees",
-            done: !nextSession,
-        });
-
-        if (teammate) {
-            list.push({
-                label: "Duel interne",
-                value: teammateRank && playerRank
-                    ? `${driver?.surname} P${playerRank} vs ${teammate.surname} P${teammateRank}`
-                    : `Battre ${teammate.surname}`,
-                done: !!playerRank && !!teammateRank && playerRank > 0 && playerRank < teammateRank,
-            });
-        }
-
-        list.push({
-            label: "Tresorerie",
-            value: `${fmtBudget(budget)} disponibles`,
-            done: (budget || 0) >= 12_000_000,
-        });
-
-        return list;
-    }, [nextSession, teammate, teammateRank, playerRank, driver?.surname, budget]);
-
-    const isBusy = simLoading || simAllLoading || liveRace?.status === "racing";
-
-    // ── Effects ────────────────────────────────────────────────────────────────
-
-    async function refreshAll() {
-        const [cal, board, budgetRes, live] = await Promise.all([
-            apiFetch("/api/season/calendar/"),
-            apiFetch("/api/drivers/"),
-            apiFetch("/api/season/budget/"),
-            CLIENT_ONLY_MODE ? apiFetch("/api/live-race/") : Promise.resolve(null),
-        ]);
-        const nextCalendarData = Array.isArray(cal) ? cal : [];
-        const nextBoardData = Array.isArray(board) ? board : [];
-        const nextBudget = budgetRes?.budget ?? 0;
-
-        setCalendar(nextCalendarData);
-        setDriversBoard(nextBoardData);
-        setBudget(nextBudget);
-        setLiveRace(live?.race ?? null);
-
-        return { calendar: nextCalendarData, board: nextBoardData, budget: nextBudget };
-    }
+    const [resultSession, setResultSession] = useState(null);
+    const [confirmReset, setConfirmReset] = useState(false);
+    const playerRow = data.board.find((row) => isSameDriver(row, driver));
+    const playerRank = data.board.findIndex((row) => isSameDriver(row, driver)) + 1;
+    const champion = useMemo(() => [...data.board].sort((a, b) => (b.points ?? 0) - (a.points ?? 0) || (b.wins ?? 0) - (a.wins ?? 0))[0] ?? null, [data.board]);
+    const recap = useMemo(() => buildSessionRecap(resultSession?.results, driver, resultSession), [resultSession, driver]);
+    const playerStats = playerRow ? {
+        ...playerRow,
+        street: playerRow.street_circuit_affinity,
+        high: playerRow.high_speed_circuit_affinity,
+        wet: playerRow.wet_circuit_affinity,
+    } : null;
 
     useEffect(() => {
-        (async () => {
-            try {
-                setError(null);
-                setLoading(true);
-                await refreshAll();
-            } catch (e) {
-                console.error(e);
-                setError(e?.message || "Erreur lors du chargement");
-            } finally {
-                setLoading(false);
-            }
-        })();
+        let cancelled = false;
+        setLoading(true);
+        setError(null);
+        setResultSession(null);
+        setConfirmReset(false);
+        loadSeasonData().then((next) => {
+            if (!cancelled) setData(next);
+        }).catch((cause) => {
+            if (!cancelled) setError(cause.message || "Erreur lors du chargement");
+        }).finally(() => {
+            if (!cancelled) setLoading(false);
+        });
+        return () => { cancelled = true; };
     }, [activeSessionId]);
 
-    useEffect(() => {
-        if (!playerRow) return;
-        setPlayerStats({
-            speed:       playerRow.speed,
-            racing:      playerRow.racing,
-            reaction:    playerRow.reaction,
-            experience:  playerRow.experience,
-            consistency: playerRow.consistency,
-            error_rate:  playerRow.error_rate,
-            street:      playerRow.street_circuit_affinity,
-            high:        playerRow.high_speed_circuit_affinity,
-            wet:         playerRow.wet_circuit_affinity,
-            points:      playerRow.points,
-        });
-    }, [playerRow]);
-
-    // ── Actions ────────────────────────────────────────────────────────────────
-
-    const openWdc = async () => {
+    async function resetSeason() {
         try {
-            setWdcError(null);
-            setWdcLoading(true);
-            const board = await apiFetch("/api/drivers/");
-            setWdcBoard(Array.isArray(board) ? board : []);
-            setActiveModal("wdc");
-        } catch (e) {
-            console.error(e);
-            setWdcBoard([]);
-            setWdcError(e?.message || "Erreur chargement WDC");
-            setActiveModal("wdc");
-        } finally {
-            setWdcLoading(false);
-        }
-    };
-
-    const sameDriver = isSameDriver;
-
-    const applyBudgetAward = async (results, meta, notify = false) => {
-        const sType = meta?.session_type;
-        const isRace = sType === "GP" || sType === "S";
-        const playerResult = results.find((r) => sameDriver(r, driver)) || null;
-
-        if (!isRace || !playerResult?.position) {
-            return { earned: 0, playerResult };
-        }
-
-        const earned = earnedBudget(playerResult.position, sType);
-        await apiFetch("/api/season/budget/award/", {
-            method: "POST",
-            body: JSON.stringify({ amount: earned }),
-        });
-
-        if (notify) {
-            addToast({
-                message: `P${playerResult.position} · +${fmtBudget(earned)} budget`,
-                type: playerResult.position <= 3 ? "success" : "info",
-                duration: 5000,
-            });
-        }
-
-        return { earned, playerResult };
-    };
-
-    const simulateOne = async (sessionIndex, force = false, metaOverride = null) => {
-        try {
-            if (playerStats) setPrevPlayerStats(playerStats);
-            setSimLoading(true);
+            setResetting(true);
             setError(null);
-
-            const meta = metaOverride || flatSessions.find((s) => s?.index === sessionIndex) || null;
-            setLastSessionMeta(meta);
-
-            const url = force
-                ? `/api/simulate/session/${sessionIndex}/?force=1`
-                : `/api/simulate/session/${sessionIndex}/`;
-            const res = await apiFetch(url, { method: "POST", body: JSON.stringify({}) });
-            const results = Array.isArray(res?.results) ? res.results : [];
-
-            setLastResults(results);
-
-            const sType = meta?.session_type;
-            const isRace = sType === "GP" || sType === "S";
-            const award = await applyBudgetAward(results, meta, isRace);
-            const recap = buildSessionRecap(results, driver, meta, award.earned);
-
-            setLastBudgetAward(award);
-            setLastSummary(recap);
-            setLastEvents(recap.events);
-
-            const fresh = await refreshAll();
-            const isSeasonNowDone = fresh.calendar.length > 0 && fresh.calendar.every((s) => !!s.is_simulated);
-
-            if (isSeasonNowDone) {
-                setWdcBoard(fresh.board);
-                setWdcError(null);
-                setActiveModal("wdc");
-            } else if (isRace) {
-                setActiveModal("session");
-            } else {
-                // Toast for FP/Quali
-                const label = SESSION_LABEL[sType] ?? sType;
-                if (sType === "FP") {
-                    addToast({ message: `${label} terminé — stats améliorées`, type: "info" });
-                } else {
-                    const pos = award.playerResult?.position;
-                    const posText = pos ? `P${pos}` : "—";
-                    addToast({
-                        message: `${label} · ${driver?.surname ?? ""} : ${posText}`,
-                        type: pos && pos <= 3 ? "success" : "info",
-                    });
-                }
-            }
-        } catch (e) {
-            console.error(e);
-            setError(e?.message || "Erreur simulation");
-        } finally {
-            setSimLoading(false);
-        }
-    };
-
-    const simulateOneSilent = async (sessionIndex, force = false, metaOverride = null) => {
-        const meta = metaOverride || flatSessions.find((s) => s?.index === sessionIndex) || null;
-        setLastSessionMeta(meta);
-
-        const url = force
-            ? `/api/simulate/session/${sessionIndex}/?force=1`
-            : `/api/simulate/session/${sessionIndex}/`;
-        const res = await apiFetch(url, { method: "POST", body: JSON.stringify({}) });
-        const results = Array.isArray(res?.results) ? res.results : [];
-        const award = await applyBudgetAward(results, meta, false);
-        const recap = buildSessionRecap(results, driver, meta, award.earned);
-
-        setLastResults(results);
-        setLastBudgetAward(award);
-        setLastSummary(recap);
-        setLastEvents(recap.events);
-
-        await refreshAll();
-
-        return { results, meta, award, recap };
-    };
-
-    const simulateNext = async (force = false) => {
-        if (!nextSession) return;
-        await simulateOne(nextSession.index, force, nextSession);
-    };
-
-    const simulateAll = async (force = false) => {
-        const remaining = flatSessions.filter((s) => !s?.is_simulated);
-        if (!remaining.length) return;
-
-        try {
-            simAllAbortRef.current = false;
-            setSimAllLoading(true);
-            setError(null);
-            setSimAllProgress({ done: 0, total: remaining.length });
-            setActiveModal(null);
-            let totalEarned = 0;
-
-            for (let i = 0; i < remaining.length; i++) {
-                if (simAllAbortRef.current) break;
-                if (playerStats) setPrevPlayerStats(playerStats);
-                const s = remaining[i];
-                const outcome = await simulateOneSilent(s.index, force, s);
-                totalEarned += outcome?.award?.earned || 0;
-                setSimAllProgress({ done: i + 1, total: remaining.length });
-            }
-
-            if (totalEarned > 0) {
-                addToast({
-                    message: `Simulation terminee · +${fmtBudget(totalEarned)} budget`,
-                    type: "success",
-                    duration: 5500,
-                });
-            }
-            const latestCalendar = await apiFetch("/api/season/calendar/");
-            const latestBoard = await apiFetch("/api/drivers/");
-            const finished = Array.isArray(latestCalendar) && latestCalendar.length > 0 && latestCalendar.every((s) => !!s.is_simulated);
-            if (finished) {
-                setCalendar(latestCalendar);
-                setDriversBoard(Array.isArray(latestBoard) ? latestBoard : []);
-                setWdcBoard(Array.isArray(latestBoard) ? latestBoard : []);
-                setWdcError(null);
-                setActiveModal("wdc");
-            } else {
-                setActiveModal("session");
-            }
-        } catch (e) {
-            console.error(e);
-            setError(e?.message || "Erreur simulation totale");
-        } finally {
-            setSimAllLoading(false);
-        }
-    };
-
-    const simulateGp = async (gpName) => {
-        const gpSessions = flatSessions.filter((s) => s?.gp_name === gpName && !s?.is_simulated);
-        if (!gpSessions.length) return;
-
-        try {
-            simAllAbortRef.current = false;
-            setSimAllLoading(true);
-            setError(null);
-            setSimAllProgress({ done: 0, total: gpSessions.length });
-            setActiveModal(null);
-            let totalEarned = 0;
-
-            for (let i = 0; i < gpSessions.length; i++) {
-                if (simAllAbortRef.current) break;
-                if (playerStats) setPrevPlayerStats(playerStats);
-                const s = gpSessions[i];
-                const outcome = await simulateOneSilent(s.index, false, s);
-                totalEarned += outcome?.award?.earned || 0;
-                setSimAllProgress({ done: i + 1, total: gpSessions.length });
-            }
-
-            if (totalEarned > 0) {
-                addToast({
-                    message: `${gpName} termine · +${fmtBudget(totalEarned)} budget`,
-                    type: "success",
-                    duration: 5500,
-                });
-            }
-            const latestCalendar = await apiFetch("/api/season/calendar/");
-            const latestBoard = await apiFetch("/api/drivers/");
-            const finished = Array.isArray(latestCalendar) && latestCalendar.length > 0 && latestCalendar.every((s) => !!s.is_simulated);
-            if (finished) {
-                setCalendar(latestCalendar);
-                setDriversBoard(Array.isArray(latestBoard) ? latestBoard : []);
-                setWdcBoard(Array.isArray(latestBoard) ? latestBoard : []);
-                setWdcError(null);
-                setActiveModal("wdc");
-            } else {
-                setActiveModal("session");
-            }
-        } catch (e) {
-            console.error(e);
-            setError(e?.message || "Erreur simulation GP");
-        } finally {
-            setSimAllLoading(false);
-        }
-    };
-
-    const resetSeason = async () => {
-        try {
-            setSimLoading(true);
-            setError(null);
-
             const res = await apiFetch("/api/season/reset/", {
                 method: "POST",
                 body: JSON.stringify({ full: true, advanceSeason: false, keepSeason: true }),
             });
-
-            setCalendar([]);
-            setDriversBoard([]);
-            setLastResults([]);
-            setLastEvents([]);
-            setLastSummary(null);
-            setLastBudgetAward(null);
-            setExpandedGp(null);
-            setPrevPlayerStats(null);
-            setPlayerStats(null);
-            setActiveModal(null);
-            setLastSessionMeta(null);
-            setWdcBoard([]);
-            setWdcError(null);
-
-            const refreshed = await refreshAll();
-            const resetDriver = refreshed?.board?.find((d) => isSameDriver(d, driver));
+            const next = await loadSeasonData();
+            setData(next);
+            const resetDriver = next.board.find((row) => isSameDriver(row, driver));
             if (resetDriver) setDriver(resetDriver);
-            setSim((prev) => ({
-                ...(prev || {}),
+            setSim((previous) => ({
+                ...previous,
                 season: res?.season ?? season,
                 currentRound: 0,
                 lastResults: null,
                 standings: null,
             }));
-        } catch (e) {
-            console.error(e);
-            setError(e?.message || "Erreur reset");
+            setResultSession(null);
+            setConfirmReset(false);
+        } catch (cause) {
+            setError(cause.message || "Erreur de remise à zéro");
         } finally {
-            setSimLoading(false);
+            setResetting(false);
         }
-    };
-
-    const toggleGp = (gpName) => setExpandedGp((cur) => (cur === gpName ? null : gpName));
-
-    // ── Render ─────────────────────────────────────────────────────────────────
-
-    if (!team || !driver) {
-        return (
-            <div className="flex-1 flex items-center justify-center p-6">
-                <div className="text-center">
-                    <h1 className="font-f1-display text-2xl font-bold mb-2">Team ou pilote manquant</h1>
-                    <p className="text-f1-silver">Retourne choisir une team puis un pilote.</p>
-                    <Button className="mt-4" onClick={() => navigate("/choose-team")}>
-                        Refaire les choix
-                    </Button>
-                </div>
-            </div>
-        );
     }
+
+    if (!team || !driver) return (
+        <div className="flex-1 flex items-center justify-center p-6">
+            <div className="text-center">
+                <h1 className="font-f1-display text-2xl font-bold mb-2">Team ou pilote manquant</h1>
+                <p className="text-f1-silver">Retourne choisir une team puis un pilote.</p>
+                <Button className="mt-4" onClick={() => navigate("/choose-team")}>Refaire les choix</Button>
+            </div>
+        </div>
+    );
 
     return (
         <div className="flex-1 flex flex-col">
-            {CLIENT_ONLY_MODE && <RaceCalendar calendar={calendar} liveRace={liveRace} driver={driver} team={team} season={season} budget={budget} playerRank={playerRank} playerPoints={playerPoints} loading={loading} error={error} champion={currentChampion}
-                onReset={() => setActiveModal("reset-season")} onStandings={() => navigate("/standings")}
-                onResults={(session) => {
-                    setLastResults(session.results ?? []);
-                    setLastSessionMeta(session);
-                    const recap = buildSessionRecap(session.results, driver, session);
-                    setLastSummary(recap);
-                    setLastEvents(recap.events);
-                    setLastBudgetAward(null);
-                    setPrevPlayerStats(null);
-                    setActiveModal("session");
-                }} />}
-            {!CLIENT_ONLY_MODE && seasonDone && (
-                <div className="w-full px-4 md:px-6 lg:px-8 pt-4 md:pt-6 lg:pt-8">
-                    <div className="relative">
-                        <ChampionStage champion={currentChampion} player={driver} season={season} compact />
-                        <div className="mt-3 flex justify-end">
-                            <Button onClick={() => navigate("/end-of-season")} size="lg">
-                                Voir la saison suivante
-                            </Button>
-                        </div>
-                    </div>
-                </div>
-            )}
-            <div className={CLIENT_ONLY_MODE ? "" : "flex-1 p-4 md:p-6 lg:p-8 flex flex-col lg:flex-row gap-6 lg:gap-8"}>
-            {!CLIENT_ONLY_MODE && <>
-            <CalendarSection
-                loading={loading}
-                error={error}
-                gpNames={gpNames}
-                calendarByGp={calendarByGp}
-                expandedGp={expandedGp}
-                toggleGp={toggleGp}
-                nextSession={nextSession}
-                isBusy={isBusy}
-                simLoading={simLoading}
-                simAllLoading={simAllLoading}
-                simAllProgress={simAllProgress}
-                onSimulateNext={() => simulateNext(false)}
-                onForceNext={() => simulateNext(true)}
-                onSimulateAll={() => simulateAll(false)}
-                onForceAll={() => simulateAll(true)}
-                onSimulateOne={simulateOne}
-                onSimulateGp={simulateGp}
-                onStop={() => { simAllAbortRef.current = true; }}
-                totalSessions={totalSessions}
-                simulatedSessions={simulatedSessions}
-                season={season}
-                objectives={dynamicObjectives}
+            <RaceCalendar
+                calendar={data.calendar} liveRace={data.liveRace} driver={driver} team={team}
+                season={season} budget={data.budget} playerRank={playerRank} playerPoints={playerRow?.points ?? 0}
+                loading={loading} error={error} champion={champion}
+                onReset={() => setConfirmReset(true)} onStandings={() => navigate("/standings")}
+                onResults={setResultSession}
             />
-
-            <PlayerCard
-                driver={driver}
-                team={team}
-                teamBorder={TEAM_STYLE[team.name] || "border-f1-border"}
-                playerPoints={playerPoints}
-                playerStats={playerStats}
-                prevPlayerStats={prevPlayerStats}
-                isBusy={isBusy}
-                driversBoard={driversBoard}
-                wdcLoading={wdcLoading}
-                onReset={() => setActiveModal("reset-season")}
-                onOpenWdc={openWdc}
-                budget={budget}
-            />
-            </>}
-
             <SessionResultsModal
-                open={activeModal === "session"}
-                onClose={() => setActiveModal(null)}
-                results={lastResults}
-                player={driver}
-                sessionMeta={lastSessionMeta}
-                playerStats={playerStats}
-                prevPlayerStats={prevPlayerStats}
-                summary={lastSummary}
-                events={lastEvents}
-                budgetAward={lastBudgetAward}
+                open={Boolean(resultSession)} onClose={() => setResultSession(null)}
+                results={resultSession?.results ?? []} player={driver} sessionMeta={resultSession}
+                playerStats={playerStats} prevPlayerStats={null}
+                summary={recap} events={recap.events} budgetAward={null}
             />
-
-            <WdcModal
-                open={activeModal === "wdc"}
-                onClose={() => setActiveModal(null)}
-                board={wdcBoard}
-                player={driver}
-                season={season}
-                loading={wdcLoading}
-                error={wdcError}
-                onReload={openWdc}
-            />
-
             <ConfirmModal
-                open={activeModal === "reset-season"}
-                title="Reset de la saison"
-                danger
-                confirmLabel="Reset saison"
-                loading={simLoading}
-                onClose={() => setActiveModal(null)}
-                onConfirm={resetSeason}
+                open={confirmReset} title="Reset de la saison" danger confirmLabel="Reset saison"
+                loading={resetting} onClose={() => setConfirmReset(false)} onConfirm={resetSeason}
             >
                 Tu vas remettre la saison {season} a zero pour cette session locale. Le calendrier,
                 les resultats, le budget et la progression sportive seront reinitialises.
             </ConfirmModal>
-            </div>
         </div>
     );
 }
